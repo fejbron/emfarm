@@ -107,6 +107,8 @@ export default function SettingsPage() {
         e.target.value = ''
     }
 
+    const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
     const handleClearAll = () => {
         dispatch({ type: 'CLEAR_ALL' })
         setForm({
@@ -116,6 +118,7 @@ export default function SettingsPage() {
             currency: 'GHS '
         })
         setShowClearConfirm(false)
+        setDeleteConfirmText('')
     }
 
     return (
@@ -242,16 +245,33 @@ export default function SettingsPage() {
                         Make sure to export your data first!
                     </p>
                     {showClearConfirm ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
                             <span style={{ color: 'var(--danger)', fontWeight: 600, fontSize: 'var(--font-sm)' }}>
-                                Are you sure? This cannot be undone!
+                                Are you sure? This cannot be undone! Type <strong>DELETE</strong> below to confirm.
                             </span>
-                            <button className="btn btn-danger" onClick={handleClearAll}>
-                                <Trash2 size={16} /> Yes, Delete All
-                            </button>
-                            <button className="btn btn-secondary" onClick={() => setShowClearConfirm(false)}>
-                                Cancel
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Type DELETE"
+                                    value={deleteConfirmText}
+                                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                    style={{ maxWidth: '150px' }}
+                                />
+                                <button
+                                    className="btn btn-danger"
+                                    onClick={handleClearAll}
+                                    disabled={deleteConfirmText !== 'DELETE'}
+                                >
+                                    <Trash2 size={16} /> Yes, Delete All
+                                </button>
+                                <button className="btn btn-secondary" onClick={() => {
+                                    setShowClearConfirm(false)
+                                    setDeleteConfirmText('')
+                                }}>
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <button className="btn btn-danger" onClick={() => setShowClearConfirm(true)}>
