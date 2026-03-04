@@ -17,7 +17,7 @@ function formatDate(dateStr) {
 
 export default function EggCollection() {
     const { state, dispatch } = useFarm()
-    const { collections, settings } = state
+    const { collections, settings, profile } = state
     const [showModal, setShowModal] = useState(false)
     const [filterHouse, setFilterHouse] = useState('all')
     const [form, setForm] = useState({
@@ -102,9 +102,11 @@ export default function EggCollection() {
                     <h2>Egg Collection</h2>
                     <p>Track daily egg production by house</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                    <Plus size={18} /> Add Collection
-                </button>
+                {profile?.role === 'manager' && (
+                    <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                        <Plus size={18} /> Add Collection
+                    </button>
+                )}
             </div>
 
             <div className="stat-cards">
@@ -160,10 +162,12 @@ export default function EggCollection() {
                     <div className="empty-state">
                         <div className="empty-icon"><Egg size={28} /></div>
                         <h3>No collections recorded</h3>
-                        <p>Click "Add Collection" to log your first egg collection</p>
-                        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                            <Plus size={18} /> Add Collection
-                        </button>
+                        <p>{profile?.role === 'manager' ? 'Click "Add Collection" to log your first egg collection' : 'Waiting for the manager to log collections'}</p>
+                        {profile?.role === 'manager' && (
+                            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                                <Plus size={18} /> Add Collection
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="table-container">
@@ -177,7 +181,7 @@ export default function EggCollection() {
                                     <th>Good Eggs</th>
                                     <th>Crates</th>
                                     <th>Notes</th>
-                                    <th></th>
+                                    {profile?.role === 'manager' && <th></th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -190,11 +194,13 @@ export default function EggCollection() {
                                         <td className="font-bold">{(Number(c.goodEggs) || (Number(c.eggs) - Number(c.damagedEggs || 0))).toLocaleString()}</td>
                                         <td>{c.crates}</td>
                                         <td className="text-muted">{c.notes || '—'}</td>
-                                        <td>
-                                            <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(c.id)}>
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
+                                        {profile?.role === 'manager' && (
+                                            <td>
+                                                <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(c.id)}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

@@ -19,7 +19,7 @@ const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque', 'Oth
 
 export default function Expenses() {
     const { state, dispatch } = useFarm()
-    const { expenses, settings } = state
+    const { expenses, settings, profile } = state
     const currency = settings.currency
     const [showModal, setShowModal] = useState(false)
     const [filterCategory, setFilterCategory] = useState('all')
@@ -108,9 +108,11 @@ export default function Expenses() {
                     <h2>Expenses</h2>
                     <p>Track farm expenses by category</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                    <Plus size={18} /> Add Expense
-                </button>
+                {profile?.role === 'manager' && (
+                    <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                        <Plus size={18} /> Add Expense
+                    </button>
+                )}
             </div>
 
             <div className="stat-cards">
@@ -198,8 +200,8 @@ export default function Expenses() {
                     <div className="empty-state">
                         <div className="empty-icon"><Wallet size={28} /></div>
                         <h3>No expenses recorded</h3>
-                        <p>{filterCategory !== 'all' ? `No ${filterCategory} expenses found` : 'Click "Add Expense" to log your first expense'}</p>
-                        {filterCategory === 'all' && (
+                        <p>{filterCategory !== 'all' ? `No ${filterCategory} expenses found` : (profile?.role === 'manager' ? 'Click "Add Expense" to log your first expense' : 'Waiting for the manager to record expenses')}</p>
+                        {filterCategory === 'all' && profile?.role === 'manager' && (
                             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                                 <Plus size={18} /> Add Expense
                             </button>
@@ -215,7 +217,7 @@ export default function Expenses() {
                                     <th>Description</th>
                                     <th>Payment</th>
                                     <th>Amount</th>
-                                    <th></th>
+                                    {profile?.role === 'manager' && <th></th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -231,11 +233,13 @@ export default function Expenses() {
                                         <td>{e.description || '—'}</td>
                                         <td className="text-muted">{e.paymentMethod}</td>
                                         <td className="font-bold text-danger">{currency}{Number(e.amount).toLocaleString()}</td>
-                                        <td>
-                                            <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(e.id)}>
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
+                                        {profile?.role === 'manager' && (
+                                            <td>
+                                                <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(e.id)}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

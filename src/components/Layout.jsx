@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useFarm } from '../context/FarmContext'
+import { supabase } from '../supabase'
 import {
     LayoutDashboard,
     Egg,
@@ -10,7 +11,8 @@ import {
     Settings,
     Menu,
     X,
-    Search
+    Search,
+    LogOut
 } from 'lucide-react'
 
 const navItems = [
@@ -32,9 +34,17 @@ const pageTitles = {
 }
 
 export default function Layout({ children }) {
+    const { state, dispatch } = useFarm()
+    const { settings, profile, user } = state
     const [sidebarOpen, setSidebarOpen] = useState(false)
-    const { state } = useFarm()
     const location = useLocation()
+
+    const handleLogOut = async () => {
+        if (state.isSupabase !== false) {
+            await supabase.auth.signOut()
+        }
+        dispatch({ type: 'SIGN_OUT' })
+    }
 
     const initials = state.settings.farmName
         .split(' ')
@@ -52,11 +62,11 @@ export default function Layout({ children }) {
             </button>
 
             <div
-                className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+                className={`sidebar - overlay ${sidebarOpen ? 'open' : ''} `}
                 onClick={() => setSidebarOpen(false)}
             />
 
-            <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+            <aside className={`sidebar ${sidebarOpen ? 'open' : ''} `}>
                 <div className="sidebar-header">
                     <div className="sidebar-logo">
                         <div className="logo-icon">🥚</div>
@@ -73,7 +83,7 @@ export default function Layout({ children }) {
                             key={item.path}
                             to={item.path}
                             end={item.path === '/'}
-                            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                            className={({ isActive }) => `nav - link ${isActive ? 'active' : ''} `}
                             onClick={() => setSidebarOpen(false)}
                         >
                             <item.icon size={20} />
@@ -81,6 +91,32 @@ export default function Layout({ children }) {
                         </NavLink>
                     ))}
                 </nav>
+
+                {user && (
+                    <div style={{ padding: '0 var(--space-md) var(--space-md) var(--space-md)', marginTop: 'auto' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', backgroundColor: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', marginBottom: '0.5rem' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                            </div>
+                            <div style={{ overflow: 'hidden' }}>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)' }}>
+                                    {profile?.full_name || 'User'}
+                                </p>
+                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                                    {profile?.role || 'owner'}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleLogOut}
+                            className="nav-item"
+                            style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text-muted)' }}
+                        >
+                            <LogOut size={20} />
+                            <span>Sign Out</span>
+                        </button>
+                    </div>
+                )}
 
                 <div className="sidebar-footer">
                     <div className="farm-info">
@@ -104,9 +140,11 @@ export default function Layout({ children }) {
                 </div>
                 <div className="topbar-right">
                     <div className="topbar-user">
-                        <div className="topbar-user-info">
-                            <div className="user-name">{state.settings.farmName}</div>
-                            <div className="user-role">Admin</div>
+                        <div className="user-profile">
+                            <span className="user-avatar">
+                                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : (user?.email?.charAt(0).toUpperCase() || '👤')}
+                            </span>
+                            <span className="user-name">{profile?.full_name || 'Farm User'} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginLeft: '4px' }}>• {profile?.role || 'owner'}</span></span>
                         </div>
                         <div className="topbar-avatar">{initials}</div>
                     </div>

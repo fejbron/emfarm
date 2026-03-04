@@ -22,6 +22,8 @@ const defaultSettings = {
 }
 
 const initialState = {
+    user: null,
+    profile: null,
     collections: [],
     sales: [],
     expenses: [],
@@ -137,6 +139,10 @@ function loadLocalState() {
 
 function farmReducer(state, action) {
     switch (action.type) {
+        case 'SET_USER':
+            return { ...state, user: action.payload.user, profile: action.payload.profile }
+        case 'SIGN_OUT':
+            return { ...initialState, loading: false }
         case 'SET_COLLECTIONS':
             return { ...state, collections: action.payload }
         case 'SET_SALES':
@@ -192,49 +198,86 @@ export function FarmProvider({ children }) {
     useEffect(() => {
         if (!useSupabase) return
 
-        async function fetchAll() {
+        // ── Supabase Auth & Data Loading ──
+        let channel;
+
+        async function fetchProfile(userId) {
+            const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+            return data
+        }
+
+        async function loadDataAndSubscribe(userId) {
             try {
-                const [colRes, salesRes, expRes, settRes] = await Promise.all([
+                const [colRes, salesRes, expRes, settRes, profileData] = await Promise.all([
                     supabase.from('collections').select('*').order('date', { ascending: false }),
                     supabase.from('sales').select('*').order('date', { ascending: false }),
                     supabase.from('expenses').select('*').order('date', { ascending: false }),
-                    supabase.from('settings').select('*').eq('id', 1).single()
+                    supabase.from('settings').select('*').eq('id', 1).single(),
+                    fetchProfile(userId)
                 ])
 
                 if (colRes.data) dispatch({ type: 'SET_COLLECTIONS', payload: colRes.data.map(fromDbCollection) })
                 if (salesRes.data) dispatch({ type: 'SET_SALES', payload: salesRes.data.map(fromDbSale) })
                 if (expRes.data) dispatch({ type: 'SET_EXPENSES', payload: expRes.data.map(fromDbExpense) })
                 if (settRes.data) dispatch({ type: 'SET_SETTINGS', payload: fromDbSettings(settRes.data) })
+
+                // Setup Real-time subscriptions only after data is loaded
+                channel = supabase.channel('eggledger-realtime')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, async () => {
+                        const { data } = await supabase.from('collections').select('*').order('date', { ascending: false })
+                        if (data) dispatch({ type: 'SET_COLLECTIONS', payload: data.map(fromDbCollection) })
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async () => {
+                        const { data } = await supabase.from('sales').select('*').order('date', { ascending: false })
+                        if (data) dispatch({ type: 'SET_SALES', payload: data.map(fromDbSale) })
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async () => {
+                        const { data } = await supabase.from('expenses').select('*').order('date', { ascending: false })
+                        if (data) dispatch({ type: 'SET_EXPENSES', payload: data.map(fromDbExpense) })
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, async () => {
+                        const { data } = await supabase.from('settings').select('*').eq('id', 1).single()
+                        if (data) dispatch({ type: 'SET_SETTINGS', payload: fromDbSettings(data) })
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, async () => {
+                        const updatedProfile = await fetchProfile(userId)
+                        if (updatedProfile) dispatch({ type: 'SET_USER', payload: { user: state.user, profile: updatedProfile } })
+                    })
+                    .subscribe()
+
+                return profileData
             } catch (err) {
                 console.error('Supabase fetch error:', err)
+                return null
             }
-            dispatch({ type: 'SET_LOADING', payload: false })
         }
 
-        fetchAll()
+        // Set up auth listener
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+                loadDataAndSubscribe(session.user.id).then(profile => {
+                    dispatch({ type: 'SET_USER', payload: { user: session.user, profile } })
+                    dispatch({ type: 'SET_LOADING', payload: false })
+                })
+            } else {
+                dispatch({ type: 'SET_LOADING', payload: false })
+            }
+        })
 
-        // Real-time subscriptions
-        const channel = supabase.channel('eggledger-realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, async () => {
-                const { data } = await supabase.from('collections').select('*').order('date', { ascending: false })
-                if (data) dispatch({ type: 'SET_COLLECTIONS', payload: data.map(fromDbCollection) })
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async () => {
-                const { data } = await supabase.from('sales').select('*').order('date', { ascending: false })
-                if (data) dispatch({ type: 'SET_SALES', payload: data.map(fromDbSale) })
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async () => {
-                const { data } = await supabase.from('expenses').select('*').order('date', { ascending: false })
-                if (data) dispatch({ type: 'SET_EXPENSES', payload: data.map(fromDbExpense) })
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, async () => {
-                const { data } = await supabase.from('settings').select('*').eq('id', 1).single()
-                if (data) dispatch({ type: 'SET_SETTINGS', payload: fromDbSettings(data) })
-            })
-            .subscribe()
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                loadDataAndSubscribe(session.user.id).then(profile => {
+                    dispatch({ type: 'SET_USER', payload: { user: session.user, profile } })
+                })
+            } else {
+                if (channel) supabase.removeChannel(channel)
+                dispatch({ type: 'SIGN_OUT' })
+            }
+        })
 
         return () => {
-            supabase.removeChannel(channel)
+            subscription.unsubscribe()
+            if (channel) supabase.removeChannel(channel)
         }
     }, [useSupabase])
 

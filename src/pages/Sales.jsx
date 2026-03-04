@@ -17,7 +17,7 @@ function formatDate(dateStr) {
 
 export default function Sales() {
     const { state, dispatch } = useFarm()
-    const { sales, collections, settings } = state
+    const { sales, collections, settings, profile } = state
     const currency = settings.currency
     const [showModal, setShowModal] = useState(false)
     const [filter, setFilter] = useState('all')
@@ -136,9 +136,11 @@ export default function Sales() {
                     <div className="badge badge-info" style={{ padding: '6px 14px', fontSize: 'var(--font-sm)' }}>
                         <Package size={14} style={{ marginRight: '6px' }} /> {stockCrates} crate{stockCrates !== 1 ? 's' : ''} in stock
                     </div>
-                    <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                        <Plus size={18} /> Record Sale
-                    </button>
+                    {profile?.role === 'manager' && (
+                        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                            <Plus size={18} /> Record Sale
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -193,8 +195,8 @@ export default function Sales() {
                     <div className="empty-state">
                         <div className="empty-icon"><ShoppingCart size={28} /></div>
                         <h3>No sales recorded</h3>
-                        <p>{filter !== 'all' ? 'No sales match this filter' : 'Click "Record Sale" to log your first sale'}</p>
-                        {filter === 'all' && (
+                        <p>{filter !== 'all' ? 'No sales match this filter' : (profile?.role === 'manager' ? 'Click "Record Sale" to log your first sale' : 'Waiting for the manager to record sales')}</p>
+                        {filter === 'all' && profile?.role === 'manager' && (
                             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                                 <Plus size={18} /> Record Sale
                             </button>
@@ -211,7 +213,7 @@ export default function Sales() {
                                     <th>Price/Crate</th>
                                     <th>Total</th>
                                     <th>Status</th>
-                                    <th></th>
+                                    {profile?.role === 'manager' && <th></th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -225,18 +227,21 @@ export default function Sales() {
                                         <td>
                                             <button
                                                 className={`badge ${statusBadgeClass(s.paymentStatus)}`}
-                                                onClick={() => cyclePaymentStatus(s)}
-                                                style={{ cursor: 'pointer', border: 'none' }}
-                                                title="Click to change status"
+                                                onClick={() => profile?.role === 'manager' && cyclePaymentStatus(s)}
+                                                style={{ cursor: profile?.role === 'manager' ? 'pointer' : 'default', border: 'none' }}
+                                                title={profile?.role === 'manager' ? "Click to change status" : ""}
+                                                disabled={profile?.role !== 'manager'}
                                             >
                                                 {statusLabel(s.paymentStatus)}
                                             </button>
                                         </td>
-                                        <td>
-                                            <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(s.id)}>
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
+                                        {profile?.role === 'manager' && (
+                                            <td>
+                                                <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(s.id)}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>
