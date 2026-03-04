@@ -60,14 +60,14 @@ export default function EggCollection() {
     const handleEggsChange = (val) => {
         const eggs = val
         const goodEggs = Math.max(0, Number(eggs) - Number(form.damagedEggs || 0))
-        const crates = eggs ? Math.floor(goodEggs / settings.eggsPerCrate) : ''
+        const crates = eggs ? parseFloat((goodEggs / settings.eggsPerCrate).toFixed(2)) : ''
         setForm(f => ({ ...f, eggs, crates: String(crates) }))
     }
 
     const handleDamagedChange = (val) => {
         const damagedEggs = val
         const goodEggs = Math.max(0, Number(form.eggs) - Number(damagedEggs || 0))
-        const crates = form.eggs ? Math.floor(goodEggs / settings.eggsPerCrate) : ''
+        const crates = form.eggs ? parseFloat((goodEggs / settings.eggsPerCrate).toFixed(2)) : ''
         setForm(f => ({ ...f, damagedEggs, crates: String(crates) }))
     }
 
@@ -83,7 +83,7 @@ export default function EggCollection() {
                 damagedEggs: Number(form.damagedEggs) || 0,
                 goodEggs,
                 house: form.house,
-                crates: Number(form.crates) || Math.floor(goodEggs / settings.eggsPerCrate),
+                crates: Number(form.crates) || parseFloat((goodEggs / settings.eggsPerCrate).toFixed(2)),
                 notes: form.notes.trim()
             }
         })
@@ -243,7 +243,7 @@ export default function EggCollection() {
                             <div className="form-group">
                                 <label>Crates ({settings.eggsPerCrate} good eggs/crate)</label>
                                 <input type="number" className="form-input" value={form.crates}
-                                    onChange={e => setForm(f => ({ ...f, crates: e.target.value }))} min="0" />
+                                    onChange={e => setForm(f => ({ ...f, crates: e.target.value }))} min="0" step="0.01" />
                                 <span className="text-muted" style={{ fontSize: 'var(--font-xs)', marginTop: '4px', display: 'block' }}>
                                     Auto-calculated from good eggs (total − damaged)
                                 </span>

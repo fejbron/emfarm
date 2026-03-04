@@ -11,7 +11,7 @@ CREATE TABLE collections (
   damaged_eggs INTEGER DEFAULT 0,
   good_eggs INTEGER NOT NULL,
   house TEXT NOT NULL DEFAULT '1',
-  crates INTEGER NOT NULL,
+  crates NUMERIC(10,2) NOT NULL,
   notes TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT now()
 );
