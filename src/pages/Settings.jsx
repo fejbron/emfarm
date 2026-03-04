@@ -201,7 +201,7 @@ export default function SettingsPage() {
                                                 <td>
                                                     <button
                                                         className="btn btn-secondary"
-                                                        style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                                        style={{ padding: '6px 12px', fontSize: '0.75rem', width: '110px' }}
                                                         onClick={() => toggleUserRole(p.id, p.role)}
                                                         disabled={p.id === state.user?.id}
                                                     >

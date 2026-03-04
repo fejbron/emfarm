@@ -345,12 +345,23 @@ a:hover {
 .topbar-user {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
-.topbar-avatar {
-  width: 36px;
-  height: 36px;
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--bg-input);
+  padding: 4px 12px 4px 4px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  max-width: 250px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-full);
   background: var(--accent);
   display: flex;
@@ -359,17 +370,17 @@ a:hover {
   font-weight: 700;
   font-size: var(--font-sm);
   color: var(--text-inverse);
+  flex-shrink: 0;
 }
 
-.topbar-user-info {
-  text-align: right;
-}
-
-.topbar-user-info .user-name {
+.user-name {
   font-size: var(--font-sm);
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar-user-info .user-role {
