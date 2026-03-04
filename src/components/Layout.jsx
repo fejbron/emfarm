@@ -78,18 +78,21 @@ export default function Layout({ children }) {
                 </div>
 
                 <nav className="sidebar-nav">
-                    {navItems.map(item => (
-                        <NavLink
-                            key={item.path}
-                            to={item.path}
-                            end={item.path === '/'}
-                            className={({ isActive }) => `nav - link ${isActive ? 'active' : ''} `}
-                            onClick={() => setSidebarOpen(false)}
-                        >
-                            <item.icon size={20} />
-                            {item.label}
-                        </NavLink>
-                    ))}
+                    {navItems.map(item => {
+                        if (item.path === '/settings' && profile?.role !== 'super_admin') return null
+                        return (
+                            <NavLink
+                                key={item.path}
+                                to={item.path}
+                                end={item.path === '/'}
+                                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                                onClick={() => setSidebarOpen(false)}
+                            >
+                                <item.icon size={20} />
+                                {item.label}
+                            </NavLink>
+                        )
+                    })}
                 </nav>
 
                 {user && (
@@ -103,7 +106,7 @@ export default function Layout({ children }) {
                                     {profile?.full_name || 'User'}
                                 </p>
                                 <p style={{ margin: 0, fontSize: 'var(--font-xs)', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                                    {profile?.role || 'owner'}
+                                    {profile?.role?.replace('_', ' ') || 'owner'}
                                 </p>
                             </div>
                         </div>
@@ -144,7 +147,7 @@ export default function Layout({ children }) {
                             <span className="user-avatar">
                                 {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : (user?.email?.charAt(0).toUpperCase() || '👤')}
                             </span>
-                            <span className="user-name">{profile?.full_name || 'Farm User'} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginLeft: '4px' }}>• {profile?.role || 'owner'}</span></span>
+                            <span className="user-name">{profile?.full_name || 'Farm User'} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginLeft: '4px' }}>• {profile?.role?.replace('_', ' ') || 'owner'}</span></span>
                         </div>
                         <div className="topbar-avatar">{initials}</div>
                     </div>

@@ -102,7 +102,7 @@ export default function EggCollection() {
                     <h2>Egg Collection</h2>
                     <p>Track daily egg production by house</p>
                 </div>
-                {profile?.role === 'manager' && (
+                {['manager', 'super_admin'].includes(profile?.role) && (
                     <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                         <Plus size={18} /> Add Collection
                     </button>
@@ -162,8 +162,8 @@ export default function EggCollection() {
                     <div className="empty-state">
                         <div className="empty-icon"><Egg size={28} /></div>
                         <h3>No collections recorded</h3>
-                        <p>{profile?.role === 'manager' ? 'Click "Add Collection" to log your first egg collection' : 'Waiting for the manager to log collections'}</p>
-                        {profile?.role === 'manager' && (
+                        <p>{['manager', 'super_admin'].includes(profile?.role) ? 'Click "Add Collection" to log your first egg collection' : 'Waiting for the manager to log collections'}</p>
+                        {['manager', 'super_admin'].includes(profile?.role) && (
                             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                                 <Plus size={18} /> Add Collection
                             </button>
@@ -181,7 +181,7 @@ export default function EggCollection() {
                                     <th>Good Eggs</th>
                                     <th>Crates</th>
                                     <th>Notes</th>
-                                    {profile?.role === 'manager' && <th></th>}
+                                    {['manager', 'super_admin'].includes(profile?.role) && <th></th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -194,7 +194,7 @@ export default function EggCollection() {
                                         <td className="font-bold">{(Number(c.goodEggs) || (Number(c.eggs) - Number(c.damagedEggs || 0))).toLocaleString()}</td>
                                         <td>{c.crates}</td>
                                         <td className="text-muted">{c.notes || '—'}</td>
-                                        {profile?.role === 'manager' && (
+                                        {['manager', 'super_admin'].includes(profile?.role) && (
                                             <td>
                                                 <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(c.id)}>
                                                     <Trash2 size={16} />

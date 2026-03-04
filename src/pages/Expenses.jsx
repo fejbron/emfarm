@@ -108,7 +108,7 @@ export default function Expenses() {
                     <h2>Expenses</h2>
                     <p>Track farm expenses by category</p>
                 </div>
-                {profile?.role === 'manager' && (
+                {['manager', 'super_admin'].includes(profile?.role) && (
                     <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                         <Plus size={18} /> Add Expense
                     </button>
@@ -200,8 +200,8 @@ export default function Expenses() {
                     <div className="empty-state">
                         <div className="empty-icon"><Wallet size={28} /></div>
                         <h3>No expenses recorded</h3>
-                        <p>{filterCategory !== 'all' ? `No ${filterCategory} expenses found` : (profile?.role === 'manager' ? 'Click "Add Expense" to log your first expense' : 'Waiting for the manager to record expenses')}</p>
-                        {filterCategory === 'all' && profile?.role === 'manager' && (
+                        <p>{filterCategory !== 'all' ? `No ${filterCategory} expenses found` : (['manager', 'super_admin'].includes(profile?.role) ? 'Click "Add Expense" to log your first expense' : 'Waiting for the manager to record expenses')}</p>
+                        {filterCategory === 'all' && ['manager', 'super_admin'].includes(profile?.role) && (
                             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                                 <Plus size={18} /> Add Expense
                             </button>
@@ -217,7 +217,7 @@ export default function Expenses() {
                                     <th>Description</th>
                                     <th>Payment</th>
                                     <th>Amount</th>
-                                    {profile?.role === 'manager' && <th></th>}
+                                    {['manager', 'super_admin'].includes(profile?.role) && <th></th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -233,7 +233,7 @@ export default function Expenses() {
                                         <td>{e.description || '—'}</td>
                                         <td className="text-muted">{e.paymentMethod}</td>
                                         <td className="font-bold text-danger">{currency}{Number(e.amount).toLocaleString()}</td>
-                                        {profile?.role === 'manager' && (
+                                        {['manager', 'super_admin'].includes(profile?.role) && (
                                             <td>
                                                 <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(e.id)}>
                                                     <Trash2 size={16} />

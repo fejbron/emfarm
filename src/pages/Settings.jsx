@@ -16,7 +16,7 @@ export default function SettingsPage() {
     const [loadingProfiles, setLoadingProfiles] = useState(false)
 
     useEffect(() => {
-        if (profile?.role === 'manager' && state.isSupabase !== false) {
+        if (profile?.role === 'super_admin' && state.isSupabase !== false) {
             fetchProfiles()
         }
     }, [profile, state.isSupabase])
@@ -31,12 +31,15 @@ export default function SettingsPage() {
     }
 
     const toggleUserRole = async (userId, currentRole) => {
-        if (currentRole === 'manager' && profiles.filter(p => p.role === 'manager').length <= 1) {
-            alert("You cannot demote the only manager.")
+        if (currentRole === 'super_admin' && profiles.filter(p => p.role === 'super_admin').length <= 1) {
+            alert("You cannot demote the only super admin.")
             return
         }
 
-        const newRole = currentRole === 'manager' ? 'owner' : 'manager'
+        const roles = ['owner', 'manager', 'super_admin']
+        const currentIdx = roles.indexOf(currentRole)
+        const newRole = roles[(currentIdx + 1) % roles.length]
+
         const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId)
 
         if (!error) {
@@ -164,12 +167,12 @@ export default function SettingsPage() {
                 <p>Configure your farm details and app preferences</p>
             </div>
 
-            {profile?.role === 'manager' && state.isSupabase !== false && (
+            {profile?.role === 'super_admin' && state.isSupabase !== false && (
                 <div className="card mb-lg">
                     <div className="settings-section">
                         <h3><Users size={20} style={{ verticalAlign: 'middle', marginRight: '8px' }} /> User Management</h3>
                         <p className="text-muted mb-lg" style={{ fontSize: 'var(--font-sm)' }}>
-                            Control who has access to your farm data. Managers can edit data, Owners can only view.
+                            Control who has access to your farm data. Super Admins manage apps, Managers edit data, Owners only view.
                         </p>
 
                         {loadingProfiles ? (
@@ -192,20 +195,20 @@ export default function SettingsPage() {
                                                 <td className="font-bold">{p.full_name || 'Unknown'}</td>
                                                 <td>{p.email}</td>
                                                 <td>
-                                                    <span className={`badge ${p.role === 'manager' ? 'badge-primary' : 'badge-info'}`}>
-                                                        {p.role === 'manager' ? <Shield size={12} style={{ marginRight: '4px' }} /> : <ShieldAlert size={12} style={{ marginRight: '4px' }} />}
-                                                        {p.role}
+                                                    <span className={`badge ${p.role === 'super_admin' ? 'badge-primary' : (p.role === 'manager' ? 'badge-success' : 'badge-info')}`}>
+                                                        {p.role === 'super_admin' ? <Shield size={12} style={{ marginRight: '4px' }} /> : (p.role === 'manager' ? <Users size={12} style={{ marginRight: '4px' }} /> : <ShieldAlert size={12} style={{ marginRight: '4px' }} />)}
+                                                        {p.role.replace('_', ' ')}
                                                     </span>
                                                 </td>
                                                 <td className="text-muted">{new Date(p.created_at).toLocaleDateString()}</td>
                                                 <td>
                                                     <button
                                                         className="btn btn-secondary"
-                                                        style={{ padding: '6px 12px', fontSize: '0.75rem', width: '110px' }}
+                                                        style={{ padding: '6px 12px', fontSize: '0.75rem', width: '130px' }}
                                                         onClick={() => toggleUserRole(p.id, p.role)}
                                                         disabled={p.id === state.user?.id}
                                                     >
-                                                        Make {p.role === 'manager' ? 'Owner' : 'Manager'}
+                                                        Change Role
                                                     </button>
                                                 </td>
                                             </tr>
@@ -218,7 +221,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {profile?.role === 'manager' && (
+            {profile?.role === 'super_admin' && (
                 <div className="card mb-lg">
                     <div className="settings-section">
                         <h3>🏠 Farm Details</h3>
@@ -283,7 +286,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
-            {profile?.role === 'manager' && (
+            {profile?.role === 'super_admin' && (
                 <div className="card mb-lg">
                     <div className="settings-section">
                         <h3>💾 Data Management</h3>

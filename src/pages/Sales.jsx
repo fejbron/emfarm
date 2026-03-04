@@ -136,7 +136,7 @@ export default function Sales() {
                     <div className="badge badge-info" style={{ padding: '6px 14px', fontSize: 'var(--font-sm)' }}>
                         <Package size={14} style={{ marginRight: '6px' }} /> {stockCrates} crate{stockCrates !== 1 ? 's' : ''} in stock
                     </div>
-                    {profile?.role === 'manager' && (
+                    {['manager', 'super_admin'].includes(profile?.role) && (
                         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                             <Plus size={18} /> Record Sale
                         </button>
@@ -195,8 +195,8 @@ export default function Sales() {
                     <div className="empty-state">
                         <div className="empty-icon"><ShoppingCart size={28} /></div>
                         <h3>No sales recorded</h3>
-                        <p>{filter !== 'all' ? 'No sales match this filter' : (profile?.role === 'manager' ? 'Click "Record Sale" to log your first sale' : 'Waiting for the manager to record sales')}</p>
-                        {filter === 'all' && profile?.role === 'manager' && (
+                        <p>{filter !== 'all' ? 'No sales match this filter' : (['manager', 'super_admin'].includes(profile?.role) ? 'Click "Record Sale" to log your first sale' : 'Waiting for the manager to record sales')}</p>
+                        {filter === 'all' && ['manager', 'super_admin'].includes(profile?.role) && (
                             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                                 <Plus size={18} /> Record Sale
                             </button>
@@ -213,7 +213,7 @@ export default function Sales() {
                                     <th>Price/Crate</th>
                                     <th>Total</th>
                                     <th>Status</th>
-                                    {profile?.role === 'manager' && <th></th>}
+                                    {['manager', 'super_admin'].includes(profile?.role) && <th></th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -227,15 +227,15 @@ export default function Sales() {
                                         <td>
                                             <button
                                                 className={`badge ${statusBadgeClass(s.paymentStatus)}`}
-                                                onClick={() => profile?.role === 'manager' && cyclePaymentStatus(s)}
-                                                style={{ cursor: profile?.role === 'manager' ? 'pointer' : 'default', border: 'none' }}
-                                                title={profile?.role === 'manager' ? "Click to change status" : ""}
-                                                disabled={profile?.role !== 'manager'}
+                                                onClick={() => ['manager', 'super_admin'].includes(profile?.role) && cyclePaymentStatus(s)}
+                                                style={{ cursor: ['manager', 'super_admin'].includes(profile?.role) ? 'pointer' : 'default', border: 'none' }}
+                                                title={['manager', 'super_admin'].includes(profile?.role) ? "Click to change status" : ""}
+                                                disabled={!['manager', 'super_admin'].includes(profile?.role)}
                                             >
                                                 {statusLabel(s.paymentStatus)}
                                             </button>
                                         </td>
-                                        {profile?.role === 'manager' && (
+                                        {['manager', 'super_admin'].includes(profile?.role) && (
                                             <td>
                                                 <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(s.id)}>
                                                     <Trash2 size={16} />
