@@ -1,15 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react'
-import { db } from '../firebase'
-import {
-    collection,
-    doc,
-    addDoc,
-    deleteDoc,
-    updateDoc,
-    onSnapshot,
-    query,
-    orderBy
-} from 'firebase/firestore'
+import { supabase } from '../supabase'
 
 const FarmContext = createContext()
 
@@ -39,13 +29,89 @@ const initialState = {
     loading: true
 }
 
-// Check if Firebase is configured
-function isFirebaseConfigured() {
-    const key = import.meta.env.VITE_FIREBASE_API_KEY
-    return key && key !== 'your-api-key-here' && key.length > 0
+// ── Helpers: convert between camelCase (JS) and snake_case (DB) ──
+
+function toDb(obj, type) {
+    if (type === 'collection') {
+        return {
+            date: obj.date,
+            eggs: obj.eggs,
+            damaged_eggs: obj.damagedEggs || 0,
+            good_eggs: obj.goodEggs || obj.eggs,
+            house: obj.house || '1',
+            crates: obj.crates,
+            notes: obj.notes || ''
+        }
+    }
+    if (type === 'sale') {
+        return {
+            date: obj.date,
+            customer_name: obj.customerName,
+            crates_sold: obj.cratesSold,
+            price_per_crate: obj.pricePerCrate,
+            total_amount: obj.totalAmount,
+            payment_status: obj.paymentStatus || 'paid'
+        }
+    }
+    if (type === 'expense') {
+        return {
+            date: obj.date,
+            category: obj.category,
+            description: obj.description || '',
+            amount: obj.amount,
+            payment_method: obj.paymentMethod || 'Cash'
+        }
+    }
+    return obj
 }
 
-// Local storage fallback
+function fromDbCollection(row) {
+    return {
+        id: row.id,
+        date: row.date,
+        eggs: row.eggs,
+        damagedEggs: row.damaged_eggs,
+        goodEggs: row.good_eggs,
+        house: row.house,
+        crates: row.crates,
+        notes: row.notes
+    }
+}
+
+function fromDbSale(row) {
+    return {
+        id: row.id,
+        date: row.date,
+        customerName: row.customer_name,
+        cratesSold: row.crates_sold,
+        pricePerCrate: row.price_per_crate,
+        totalAmount: row.total_amount,
+        paymentStatus: row.payment_status
+    }
+}
+
+function fromDbExpense(row) {
+    return {
+        id: row.id,
+        date: row.date,
+        category: row.category,
+        description: row.description,
+        amount: row.amount,
+        paymentMethod: row.payment_method
+    }
+}
+
+function fromDbSettings(row) {
+    return {
+        farmName: row.farm_name,
+        eggsPerCrate: row.eggs_per_crate,
+        defaultPricePerCrate: Number(row.default_price_per_crate),
+        currency: row.currency
+    }
+}
+
+// ── Local storage fallback ──
+
 const STORAGE_KEY = 'eggledger_data'
 
 function loadLocalState() {
@@ -67,6 +133,8 @@ function loadLocalState() {
     return { ...initialState, loading: false }
 }
 
+// ── Reducer ──
+
 function farmReducer(state, action) {
     switch (action.type) {
         case 'SET_COLLECTIONS':
@@ -75,9 +143,11 @@ function farmReducer(state, action) {
             return { ...state, sales: action.payload }
         case 'SET_EXPENSES':
             return { ...state, expenses: action.payload }
+        case 'SET_SETTINGS':
+            return { ...state, settings: { ...defaultSettings, ...action.payload } }
         case 'SET_LOADING':
             return { ...state, loading: action.payload }
-        // Local-only actions (fallback mode)
+        // Local-only actions
         case 'ADD_COLLECTION':
             return { ...state, collections: [{ id: Date.now().toString(), ...action.payload }, ...state.collections] }
         case 'DELETE_COLLECTION':
@@ -109,66 +179,66 @@ function farmReducer(state, action) {
     }
 }
 
+// ── Provider ──
+
 export function FarmProvider({ children }) {
-    const useFirebase = isFirebaseConfigured()
+    const useSupabase = !!supabase
     const [state, dispatch] = useReducer(farmReducer, null, () =>
-        useFirebase ? initialState : loadLocalState()
+        useSupabase ? initialState : loadLocalState()
     )
-    const isLocal = useRef(!useFirebase)
+    const isLocal = useRef(!useSupabase)
 
-    // --- Firestore real-time listeners ---
+    // ── Supabase: initial fetch + real-time subscriptions ──
     useEffect(() => {
-        if (!useFirebase) return
+        if (!useSupabase) return
 
-        const unsubscribers = []
+        async function fetchAll() {
+            try {
+                const [colRes, salesRes, expRes, settRes] = await Promise.all([
+                    supabase.from('collections').select('*').order('date', { ascending: false }),
+                    supabase.from('sales').select('*').order('date', { ascending: false }),
+                    supabase.from('expenses').select('*').order('date', { ascending: false }),
+                    supabase.from('settings').select('*').eq('id', 1).single()
+                ])
 
-        try {
-            // Collections
-            const colQ = query(collection(db, 'collections'), orderBy('date', 'desc'))
-            unsubscribers.push(onSnapshot(colQ, (snap) => {
-                const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                dispatch({ type: 'SET_COLLECTIONS', payload: data })
-            }, (err) => {
-                console.error('Firestore collections error:', err)
-            }))
-
-            // Sales
-            const salesQ = query(collection(db, 'sales'), orderBy('date', 'desc'))
-            unsubscribers.push(onSnapshot(salesQ, (snap) => {
-                const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                dispatch({ type: 'SET_SALES', payload: data })
-            }, (err) => {
-                console.error('Firestore sales error:', err)
-            }))
-
-            // Expenses
-            const expQ = query(collection(db, 'expenses'), orderBy('date', 'desc'))
-            unsubscribers.push(onSnapshot(expQ, (snap) => {
-                const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                dispatch({ type: 'SET_EXPENSES', payload: data })
-            }, (err) => {
-                console.error('Firestore expenses error:', err)
-            }))
-
-            // Settings
-            unsubscribers.push(onSnapshot(doc(db, 'config', 'settings'), (snap) => {
-                if (snap.exists()) {
-                    dispatch({ type: 'UPDATE_SETTINGS', payload: snap.data() })
-                }
-                dispatch({ type: 'SET_LOADING', payload: false })
-            }, (err) => {
-                console.error('Firestore settings error:', err)
-                dispatch({ type: 'SET_LOADING', payload: false })
-            }))
-        } catch (err) {
-            console.error('Firebase init error:', err)
+                if (colRes.data) dispatch({ type: 'SET_COLLECTIONS', payload: colRes.data.map(fromDbCollection) })
+                if (salesRes.data) dispatch({ type: 'SET_SALES', payload: salesRes.data.map(fromDbSale) })
+                if (expRes.data) dispatch({ type: 'SET_EXPENSES', payload: expRes.data.map(fromDbExpense) })
+                if (settRes.data) dispatch({ type: 'SET_SETTINGS', payload: fromDbSettings(settRes.data) })
+            } catch (err) {
+                console.error('Supabase fetch error:', err)
+            }
             dispatch({ type: 'SET_LOADING', payload: false })
         }
 
-        return () => unsubscribers.forEach(unsub => unsub())
-    }, [useFirebase])
+        fetchAll()
 
-    // --- Local storage sync (fallback mode) ---
+        // Real-time subscriptions
+        const channel = supabase.channel('eggledger-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, async () => {
+                const { data } = await supabase.from('collections').select('*').order('date', { ascending: false })
+                if (data) dispatch({ type: 'SET_COLLECTIONS', payload: data.map(fromDbCollection) })
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async () => {
+                const { data } = await supabase.from('sales').select('*').order('date', { ascending: false })
+                if (data) dispatch({ type: 'SET_SALES', payload: data.map(fromDbSale) })
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, async () => {
+                const { data } = await supabase.from('expenses').select('*').order('date', { ascending: false })
+                if (data) dispatch({ type: 'SET_EXPENSES', payload: data.map(fromDbExpense) })
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, async () => {
+                const { data } = await supabase.from('settings').select('*').eq('id', 1).single()
+                if (data) dispatch({ type: 'SET_SETTINGS', payload: fromDbSettings(data) })
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [useSupabase])
+
+    // ── Local storage sync (fallback) ──
     useEffect(() => {
         if (isLocal.current && !state.loading) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -180,79 +250,103 @@ export function FarmProvider({ children }) {
         }
     }, [state])
 
-    // --- Firestore actions ---
-    const firebaseDispatch = useCallback(async (action) => {
-        if (!useFirebase) {
-            // Fallback to local reducer
+    // ── Dispatch wrapper: routes actions to Supabase or local reducer ──
+    const supabaseDispatch = useCallback(async (action) => {
+        if (!useSupabase) {
             dispatch(action)
             return
         }
 
         try {
             switch (action.type) {
-                case 'ADD_COLLECTION':
-                    await addDoc(collection(db, 'collections'), action.payload)
+                case 'ADD_COLLECTION': {
+                    const { error } = await supabase.from('collections').insert(toDb(action.payload, 'collection'))
+                    if (error) throw error
                     break
-                case 'DELETE_COLLECTION':
-                    await deleteDoc(doc(db, 'collections', action.payload))
+                }
+                case 'DELETE_COLLECTION': {
+                    const { error } = await supabase.from('collections').delete().eq('id', action.payload)
+                    if (error) throw error
                     break
-                case 'ADD_SALE':
-                    await addDoc(collection(db, 'sales'), action.payload)
+                }
+                case 'ADD_SALE': {
+                    const { error } = await supabase.from('sales').insert(toDb(action.payload, 'sale'))
+                    if (error) throw error
                     break
-                case 'DELETE_SALE':
-                    await deleteDoc(doc(db, 'sales', action.payload))
+                }
+                case 'DELETE_SALE': {
+                    const { error } = await supabase.from('sales').delete().eq('id', action.payload)
+                    if (error) throw error
                     break
-                case 'UPDATE_SALE':
-                    await updateDoc(doc(db, 'sales', action.payload.id), action.payload.data)
-                    break
-                case 'ADD_EXPENSE':
-                    await addDoc(collection(db, 'expenses'), action.payload)
-                    break
-                case 'DELETE_EXPENSE':
-                    await deleteDoc(doc(db, 'expenses', action.payload))
-                    break
-                case 'UPDATE_SETTINGS':
-                    const { setDoc } = await import('firebase/firestore')
-                    await setDoc(doc(db, 'config', 'settings'), action.payload, { merge: true })
-                    break
-                case 'CLEAR_ALL': {
-                    // Delete all documents in each collection
-                    const { getDocs } = await import('firebase/firestore')
-                    const colls = ['collections', 'sales', 'expenses']
-                    for (const name of colls) {
-                        const snap = await getDocs(collection(db, name))
-                        const deletes = snap.docs.map(d => deleteDoc(doc(db, name, d.id)))
-                        await Promise.all(deletes)
+                }
+                case 'UPDATE_SALE': {
+                    const updateData = {}
+                    if (action.payload.data.paymentStatus !== undefined) {
+                        updateData.payment_status = action.payload.data.paymentStatus
                     }
-                    await setDoc(doc(db, 'config', 'settings'), defaultSettings)
+                    const { error } = await supabase.from('sales').update(updateData).eq('id', action.payload.id)
+                    if (error) throw error
+                    break
+                }
+                case 'ADD_EXPENSE': {
+                    const { error } = await supabase.from('expenses').insert(toDb(action.payload, 'expense'))
+                    if (error) throw error
+                    break
+                }
+                case 'DELETE_EXPENSE': {
+                    const { error } = await supabase.from('expenses').delete().eq('id', action.payload)
+                    if (error) throw error
+                    break
+                }
+                case 'UPDATE_SETTINGS': {
+                    const dbSettings = {
+                        farm_name: action.payload.farmName,
+                        eggs_per_crate: action.payload.eggsPerCrate,
+                        default_price_per_crate: action.payload.defaultPricePerCrate,
+                        currency: action.payload.currency,
+                        updated_at: new Date().toISOString()
+                    }
+                    // Remove undefined values
+                    Object.keys(dbSettings).forEach(k => dbSettings[k] === undefined && delete dbSettings[k])
+                    const { error } = await supabase.from('settings').update(dbSettings).eq('id', 1)
+                    if (error) throw error
+                    break
+                }
+                case 'CLEAR_ALL': {
+                    await Promise.all([
+                        supabase.from('collections').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                        supabase.from('sales').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                        supabase.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+                        supabase.from('settings').update({
+                            farm_name: defaultSettings.farmName,
+                            eggs_per_crate: defaultSettings.eggsPerCrate,
+                            default_price_per_crate: defaultSettings.defaultPricePerCrate,
+                            currency: defaultSettings.currency
+                        }).eq('id', 1)
+                    ])
                     break
                 }
                 case 'IMPORT_DATA': {
-                    const { setDoc: setDocImport } = await import('firebase/firestore')
-                    // Add all imported data
-                    if (action.payload.collections) {
-                        for (const item of action.payload.collections) {
-                            const { id, ...data } = item
-                            await addDoc(collection(db, 'collections'), data)
-                        }
+                    // Insert imported data
+                    if (action.payload.collections?.length) {
+                        const rows = action.payload.collections.map(c => toDb(c, 'collection'))
+                        await supabase.from('collections').insert(rows)
                     }
-                    if (action.payload.sales) {
-                        for (const item of action.payload.sales) {
-                            const { id, ...data } = item
-                            await addDoc(collection(db, 'sales'), data)
-                        }
+                    if (action.payload.sales?.length) {
+                        const rows = action.payload.sales.map(s => toDb(s, 'sale'))
+                        await supabase.from('sales').insert(rows)
                     }
-                    if (action.payload.expenses) {
-                        for (const item of action.payload.expenses) {
-                            const { id, ...data } = item
-                            await addDoc(collection(db, 'expenses'), data)
-                        }
+                    if (action.payload.expenses?.length) {
+                        const rows = action.payload.expenses.map(e => toDb(e, 'expense'))
+                        await supabase.from('expenses').insert(rows)
                     }
                     if (action.payload.settings) {
-                        await setDocImport(doc(db, 'config', 'settings'), {
-                            ...defaultSettings,
-                            ...action.payload.settings
-                        })
+                        await supabase.from('settings').update({
+                            farm_name: action.payload.settings.farmName || defaultSettings.farmName,
+                            eggs_per_crate: action.payload.settings.eggsPerCrate || defaultSettings.eggsPerCrate,
+                            default_price_per_crate: action.payload.settings.defaultPricePerCrate || defaultSettings.defaultPricePerCrate,
+                            currency: action.payload.settings.currency || defaultSettings.currency
+                        }).eq('id', 1)
                     }
                     break
                 }
@@ -260,14 +354,14 @@ export function FarmProvider({ children }) {
                     dispatch(action)
             }
         } catch (err) {
-            console.error('Firebase action error:', err)
-            // Fallback to local dispatch so UI still works
+            console.error('Supabase action error:', err)
+            // Fall back to local dispatch so UI stays responsive
             dispatch(action)
         }
-    }, [useFirebase])
+    }, [useSupabase])
 
     return (
-        <FarmContext.Provider value={{ state, dispatch: firebaseDispatch, isFirebase: useFirebase }}>
+        <FarmContext.Provider value={{ state, dispatch: supabaseDispatch, isSupabase: useSupabase }}>
             {children}
         </FarmContext.Provider>
     )
