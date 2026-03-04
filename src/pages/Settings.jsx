@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useFarm } from '../context/FarmContext'
-import { Settings, Download, Trash2, Upload } from 'lucide-react'
+import { Settings, Download, Trash2, Upload, FileSpreadsheet } from 'lucide-react'
 
 export default function SettingsPage() {
     const { state, dispatch } = useFarm()
@@ -16,7 +16,7 @@ export default function SettingsPage() {
                 farmName: form.farmName.trim() || 'My Poultry Farm',
                 eggsPerCrate: Number(form.eggsPerCrate) || 30,
                 defaultPricePerCrate: Number(form.defaultPricePerCrate) || 1500,
-                currency: form.currency || '₦'
+                currency: form.currency || 'GHS '
             }
         })
         setSaved(true)
@@ -32,6 +32,57 @@ export default function SettingsPage() {
         a.download = `eggledger-backup-${new Date().toISOString().split('T')[0]}.json`
         a.click()
         URL.revokeObjectURL(url)
+    }
+
+    const downloadCsv = (filename, headers, rows) => {
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => {
+                const str = String(cell ?? '')
+                return str.includes(',') || str.includes('"') || str.includes('\n')
+                    ? `"${str.replace(/"/g, '""')}"`
+                    : str
+            }).join(','))
+        ].join('\n')
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(url)
+    }
+
+    const exportCollectionsCsv = () => {
+        downloadCsv(
+            `egg-collections-${new Date().toISOString().split('T')[0]}.csv`,
+            ['Date', 'House', 'Total Eggs', 'Damaged Eggs', 'Good Eggs', 'Crates', 'Notes'],
+            state.collections.map(c => [
+                c.date, `House ${c.house || '1'}`, c.eggs, c.damagedEggs || 0,
+                c.goodEggs || (Number(c.eggs) - Number(c.damagedEggs || 0)),
+                c.crates, c.notes || ''
+            ])
+        )
+    }
+
+    const exportSalesCsv = () => {
+        downloadCsv(
+            `sales-${new Date().toISOString().split('T')[0]}.csv`,
+            ['Date', 'Customer', 'Crates Sold', 'Price per Crate', 'Total Amount', 'Payment Status'],
+            state.sales.map(s => [
+                s.date, s.customerName, s.cratesSold, s.pricePerCrate, s.totalAmount, s.paymentStatus
+            ])
+        )
+    }
+
+    const exportExpensesCsv = () => {
+        downloadCsv(
+            `expenses-${new Date().toISOString().split('T')[0]}.csv`,
+            ['Date', 'Category', 'Description', 'Amount', 'Payment Method'],
+            state.expenses.map(e => [
+                e.date, e.category, e.description || '', e.amount, e.paymentMethod || ''
+            ])
+        )
     }
 
     const handleImport = (e) => {
@@ -96,8 +147,8 @@ export default function SettingsPage() {
                                     className="form-input"
                                     value={form.currency}
                                     onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
-                                    placeholder="₦"
-                                    maxLength={3}
+                                    placeholder="GHS "
+                                    maxLength={5}
                                 />
                             </div>
                         </div>
@@ -141,21 +192,44 @@ export default function SettingsPage() {
                 <div className="settings-section">
                     <h3>💾 Data Management</h3>
                     <p className="text-muted mb-lg" style={{ fontSize: 'var(--font-sm)' }}>
-                        Export your data as a JSON backup or import a previous backup file.
+                        Export your data as JSON backup or download individual CSV reports.
                     </p>
-                    <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
-                        <button className="btn btn-secondary" onClick={handleExport}>
-                            <Download size={16} /> Export Data
-                        </button>
-                        <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-                            <Upload size={16} /> Import Data
-                            <input
-                                type="file"
-                                accept=".json"
-                                onChange={handleImport}
-                                style={{ display: 'none' }}
-                            />
-                        </label>
+
+                    <div style={{ marginBottom: 'var(--space-lg)' }}>
+                        <p style={{ fontSize: 'var(--font-sm)', fontWeight: 600, marginBottom: 'var(--space-sm)', color: 'var(--text-primary)' }}>
+                            Full Backup (JSON)
+                        </p>
+                        <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+                            <button className="btn btn-secondary" onClick={handleExport}>
+                                <Download size={16} /> Export JSON
+                            </button>
+                            <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                                <Upload size={16} /> Import JSON
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    onChange={handleImport}
+                                    style={{ display: 'none' }}
+                                />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p style={{ fontSize: 'var(--font-sm)', fontWeight: 600, marginBottom: 'var(--space-sm)', color: 'var(--text-primary)' }}>
+                            CSV Reports
+                        </p>
+                        <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+                            <button className="btn btn-secondary" onClick={exportCollectionsCsv} disabled={state.collections.length === 0}>
+                                <FileSpreadsheet size={16} /> Collections ({state.collections.length})
+                            </button>
+                            <button className="btn btn-secondary" onClick={exportSalesCsv} disabled={state.sales.length === 0}>
+                                <FileSpreadsheet size={16} /> Sales ({state.sales.length})
+                            </button>
+                            <button className="btn btn-secondary" onClick={exportExpensesCsv} disabled={state.expenses.length === 0}>
+                                <FileSpreadsheet size={16} /> Expenses ({state.expenses.length})
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
