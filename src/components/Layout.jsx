@@ -94,23 +94,23 @@ export default function Layout({ children }) {
 
                 {user && (
                     <div style={{ padding: '0 var(--space-md) var(--space-md) var(--space-md)', marginTop: 'auto' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', backgroundColor: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', marginBottom: '0.5rem' }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '10px 14px', backgroundColor: 'var(--bg-input)', borderRadius: 'var(--radius-md)', marginBottom: '0.5rem', border: '1px solid var(--border-color)' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0 }}>
                                 {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                             </div>
                             <div style={{ overflow: 'hidden' }}>
-                                <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)' }}>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: 'var(--font-sm)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)' }}>
                                     {profile?.full_name || 'User'}
                                 </p>
-                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                                <p style={{ margin: 0, fontSize: 'var(--font-xs)', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
                                     {profile?.role || 'owner'}
                                 </p>
                             </div>
                         </div>
                         <button
                             onClick={handleLogOut}
-                            className="nav-item"
-                            style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text-muted)' }}
+                            className="nav-link"
+                            style={{ width: '100%', background: 'none' }}
                         >
                             <LogOut size={20} />
                             <span>Sign Out</span>
