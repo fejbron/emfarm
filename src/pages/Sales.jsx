@@ -357,7 +357,7 @@ export default function Sales() {
                                     <label>Crates Sold</label>
                                     <input type="number" className="form-input" placeholder="e.g., 5"
                                         value={form.cratesSold} onChange={e => handleCratesChange(e.target.value)}
-                                        min="1" max={stockCrates} required />
+                                        min="1" max={form.house === "Emeline's Pen" ? stocks.emeline : (form.house === "Dorcas' Pen" ? stocks.dorcas : stocks.total)} required />
                                 </div>
                                 <div className="form-group">
                                     <label>House / Pen</label>
