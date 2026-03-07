@@ -33,17 +33,17 @@ export default function EggCollection() {
 
     const filteredCollections = useMemo(() => {
         if (filterHouse === 'all') return collections
-        return collections.filter(c => c.house === filterHouse)
+        return collections.filter(c => c.house === filterHouse || (filterHouse === "Emeline's Pen" && c.house === '1') || (filterHouse === "Dorcas' Pen" && c.house === '2'))
     }, [collections, filterHouse])
 
     const stats = useMemo(() => {
         const todayItems = collections.filter(c => c.date === today)
         const todayEggs = todayItems.reduce((s, c) => s + Number(c.eggs), 0)
-        const todayCrates = todayItems.reduce((s, c) => s + Number(c.crates), 0)
+        const todayCrates = Number(todayItems.reduce((s, c) => s + Number(c.crates), 0).toFixed(2))
         const todayDamaged = todayItems.reduce((s, c) => s + Number(c.damagedEggs || 0), 0)
 
-        const house1Today = todayItems.filter(c => c.house === "Emeline's Pen").reduce((s, c) => s + Number(c.eggs), 0)
-        const house2Today = todayItems.filter(c => c.house === "Dorcas' Pen").reduce((s, c) => s + Number(c.eggs), 0)
+        const house1Today = todayItems.filter(c => c.house === "Emeline's Pen" || String(c.house) === '1').reduce((s, c) => s + Number(c.eggs), 0)
+        const house2Today = todayItems.filter(c => c.house === "Dorcas' Pen" || String(c.house) === '2').reduce((s, c) => s + Number(c.eggs), 0)
 
         const last7 = new Date()
         last7.setDate(last7.getDate() - 7)

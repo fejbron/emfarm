@@ -50,7 +50,7 @@ export default function Dashboard() {
     const stats = useMemo(() => {
         const todayCollections = collections.filter(c => c.date === today)
         const todayEggs = todayCollections.reduce((s, c) => s + Number(c.eggs), 0)
-        const todayCrates = todayCollections.reduce((s, c) => s + Number(c.crates), 0)
+        const todayCrates = Number(todayCollections.reduce((s, c) => s + Number(c.crates), 0).toFixed(2))
         const todayDamaged = todayCollections.reduce((s, c) => s + Number(c.damagedEggs || 0), 0)
 
         const now = new Date()
@@ -67,7 +67,7 @@ export default function Dashboard() {
 
         const totalCratesCollected = collections.reduce((s, c) => s + Number(c.crates), 0)
         const totalCratesSold = sales.reduce((s, sl) => s + Number(sl.cratesSold), 0)
-        const stockCrates = totalCratesCollected - totalCratesSold
+        const stockCrates = Number((totalCratesCollected - totalCratesSold).toFixed(2))
 
         const pendingPayments = sales
             .filter(s => s.paymentStatus !== 'paid')
