@@ -245,7 +245,12 @@ export function FarmProvider({ children }) {
 
                 const filterByPen = (data) => {
                     if (profileData?.role === 'owner' && profileData?.assigned_pen) {
-                        return data.filter(item => item.house === profileData.assigned_pen)
+                        return data.filter(item => {
+                            if (item.house === profileData.assigned_pen) return true
+                            if (profileData.assigned_pen === "Emeline's Pen" && String(item.house) === '1') return true
+                            if (profileData.assigned_pen === "Dorcas' Pen" && String(item.house) === '2') return true
+                            return false
+                        })
                     }
                     return data
                 }
