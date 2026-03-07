@@ -220,9 +220,16 @@ export function FarmProvider({ children }) {
                     fetchProfile(userId)
                 ])
 
-                if (colRes.data) dispatch({ type: 'SET_COLLECTIONS', payload: colRes.data.map(fromDbCollection) })
-                if (salesRes.data) dispatch({ type: 'SET_SALES', payload: salesRes.data.map(fromDbSale) })
-                if (expRes.data) dispatch({ type: 'SET_EXPENSES', payload: expRes.data.map(fromDbExpense) })
+                const filterByPen = (data) => {
+                    if (profileData?.role === 'owner' && profileData?.assigned_pen) {
+                        return data.filter(item => item.house === profileData.assigned_pen)
+                    }
+                    return data
+                }
+
+                if (colRes.data) dispatch({ type: 'SET_COLLECTIONS', payload: filterByPen(colRes.data.map(fromDbCollection)) })
+                if (salesRes.data) dispatch({ type: 'SET_SALES', payload: filterByPen(salesRes.data.map(fromDbSale)) })
+                if (expRes.data) dispatch({ type: 'SET_EXPENSES', payload: filterByPen(expRes.data.map(fromDbExpense)) })
                 if (settRes.data) dispatch({ type: 'SET_SETTINGS', payload: fromDbSettings(settRes.data) })
 
                 // Setup Real-time subscriptions only after data is loaded

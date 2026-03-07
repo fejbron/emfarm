@@ -49,6 +49,17 @@ export default function SettingsPage() {
         }
     }
 
+    const updateAssignedPen = async (userId, pen) => {
+        const value = pen === 'all' ? null : pen
+        const { error } = await supabase.from('profiles').update({ assigned_pen: value }).eq('id', userId)
+
+        if (!error) {
+            setProfiles(profiles.map(p => p.id === userId ? { ...p, assigned_pen: value } : p))
+        } else {
+            alert("Failed to assign pen: " + error.message)
+        }
+    }
+
     const handleSave = (e) => {
         e.preventDefault()
         dispatch({
@@ -185,6 +196,7 @@ export default function SettingsPage() {
                                             <th>User</th>
                                             <th>Email</th>
                                             <th>Role</th>
+                                            <th>Assigned Pen</th>
                                             <th>Joined</th>
                                             <th>Actions</th>
                                         </tr>
@@ -199,6 +211,23 @@ export default function SettingsPage() {
                                                         {p.role === 'super_admin' ? <Shield size={12} style={{ marginRight: '4px' }} /> : (p.role === 'manager' ? <Users size={12} style={{ marginRight: '4px' }} /> : <ShieldAlert size={12} style={{ marginRight: '4px' }} />)}
                                                         {p.role.replace('_', ' ')}
                                                     </span>
+                                                </td>
+                                                <td>
+                                                    {p.role === 'owner' ? (
+                                                        <select 
+                                                            className="form-select" 
+                                                            style={{ padding: '4px 8px', fontSize: '0.75rem', width: 'auto' }}
+                                                            value={p.assigned_pen || 'all'}
+                                                            onChange={(e) => updateAssignedPen(p.id, e.target.value)}
+                                                            disabled={p.id === state.user?.id}
+                                                        >
+                                                            <option value="all">Unassigned (None)</option>
+                                                            <option value="Emeline's Pen">Emeline's Pen</option>
+                                                            <option value="Dorcas' Pen">Dorcas' Pen</option>
+                                                        </select>
+                                                    ) : (
+                                                        <span className="text-muted" style={{ fontSize: '0.75rem' }}>All Pens</span>
+                                                    )}
                                                 </td>
                                                 <td className="text-muted">{new Date(p.created_at).toLocaleDateString()}</td>
                                                 <td>
