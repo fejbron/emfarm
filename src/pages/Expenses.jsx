@@ -299,7 +299,7 @@ export default function Expenses() {
                                         <td className="font-bold text-danger">{currency}{Number(e.amount).toLocaleString()}</td>
                                         {['manager', 'super_admin'].includes(profile?.role) && (
                                             <td>
-                                                <div className="flex gap-xs justify-end">
+                                                <div className="flex justify-end" style={{ gap: '12px' }}>
                                                     <button className="btn btn-icon btn-secondary" title="Edit" onClick={() => handleEdit(e)}>
                                                         <Edit2 size={16} />
                                                     </button>
