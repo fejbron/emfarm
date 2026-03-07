@@ -8,6 +8,7 @@ import Expenses from './pages/Expenses'
 import Reports from './pages/Reports'
 import SettingsPage from './pages/Settings'
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 
 export default function App() {
     const { state } = useFarm()
@@ -36,6 +37,7 @@ export default function App() {
                 <Route path="/expenses" element={<Expenses />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </Layout>
