@@ -99,7 +99,7 @@ export default function Dashboard() {
         const items = [
             ...collections.slice(0, 4).map(c => ({
                 type: 'collection',
-                title: `Collected ${c.crates} crate${c.crates > 1 ? 's' : ''} (${c.eggs} eggs) — House ${c.house || '1'}`,
+                title: `Collected ${c.crates} crate${c.crates > 1 ? 's' : ''} (${c.eggs} eggs) — ${c.house || "Emeline's Pen"}`,
                 date: c.date,
                 amount: c.damagedEggs > 0 ? `${c.damagedEggs} damaged` : null,
                 amountClass: 'text-danger',

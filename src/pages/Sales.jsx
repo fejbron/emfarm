@@ -27,8 +27,11 @@ export default function Sales() {
         cratesSold: '',
         pricePerCrate: String(settings.defaultPricePerCrate),
         totalAmount: '',
-        paymentStatus: 'paid'
+        paymentStatus: 'paid',
+        house: "Emeline's Pen"
     })
+
+    const [filterHouse, setFilterHouse] = useState('all')
 
     const stockCrates = useMemo(() => {
         const totalCollected = collections.reduce((s, c) => s + Number(c.crates), 0)
@@ -49,9 +52,15 @@ export default function Sales() {
     }, [sales])
 
     const filteredSales = useMemo(() => {
-        if (filter === 'all') return sales
-        return sales.filter(s => s.paymentStatus === filter)
-    }, [sales, filter])
+        let result = sales
+        if (filter !== 'all') {
+            result = result.filter(s => s.paymentStatus === filter)
+        }
+        if (filterHouse !== 'all') {
+            result = result.filter(s => s.house === filterHouse)
+        }
+        return result
+    }, [sales, filter, filterHouse])
 
     const handleCratesChange = (val) => {
         const cratesSold = val
@@ -85,7 +94,8 @@ export default function Sales() {
                 cratesSold,
                 pricePerCrate: Number(form.pricePerCrate),
                 totalAmount: Number(form.totalAmount) || cratesSold * Number(form.pricePerCrate),
-                paymentStatus: form.paymentStatus
+                paymentStatus: form.paymentStatus,
+                house: form.house
             }
         })
         setForm({
@@ -94,7 +104,8 @@ export default function Sales() {
             cratesSold: '',
             pricePerCrate: String(settings.defaultPricePerCrate),
             totalAmount: '',
-            paymentStatus: 'paid'
+            paymentStatus: 'paid',
+            house: "Emeline's Pen"
         })
         setShowModal(false)
     }
@@ -179,13 +190,24 @@ export default function Sales() {
                 <div className="flex justify-between items-center mb-lg" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                     <h3>Sales History</h3>
                     <div className="filters-bar" style={{ marginBottom: 0 }}>
+                        {['all', "Emeline's Pen", "Dorcas' Pen"].map(f => (
+                            <button
+                                key={`house-${f}`}
+                                className={`filter-chip ${filterHouse === f ? 'active' : ''}`}
+                                onClick={() => setFilterHouse(f)}
+                            >
+                                {f === 'all' ? 'All Pens' : f}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="filters-bar" style={{ marginBottom: 0 }}>
                         {['all', 'paid', 'partial', 'unpaid'].map(f => (
                             <button
-                                key={f}
+                                key={`status-${f}`}
                                 className={`filter-chip ${filter === f ? 'active' : ''}`}
                                 onClick={() => setFilter(f)}
                             >
-                                {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                                {f === 'all' ? 'All Status' : f.charAt(0).toUpperCase() + f.slice(1)}
                             </button>
                         ))}
                     </div>
@@ -209,6 +231,7 @@ export default function Sales() {
                                 <tr>
                                     <th>Date</th>
                                     <th>Customer</th>
+                                    <th>Pen</th>
                                     <th>Crates</th>
                                     <th>Price/Crate</th>
                                     <th>Total</th>
@@ -221,6 +244,7 @@ export default function Sales() {
                                     <tr key={s.id}>
                                         <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(s.date)}</td>
                                         <td style={{ fontWeight: 600 }}>{s.customerName}</td>
+                                        <td><span className="badge badge-info">{s.house || "Emeline's Pen"}</span></td>
                                         <td>{s.cratesSold}</td>
                                         <td>{currency}{Number(s.pricePerCrate).toLocaleString()}</td>
                                         <td className="font-bold text-success">{currency}{Number(s.totalAmount).toLocaleString()}</td>
@@ -284,9 +308,24 @@ export default function Sales() {
                                         min="1" max={stockCrates} required />
                                 </div>
                                 <div className="form-group">
+                                    <label>House / Pen</label>
+                                    <select className="form-select" value={form.house}
+                                        onChange={e => setForm(f => ({ ...f, house: e.target.value }))}>
+                                        <option value="Emeline's Pen">Emeline's Pen</option>
+                                        <option value="Dorcas' Pen">Dorcas' Pen</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
                                     <label>Price per Crate ({currency.trim()})</label>
                                     <input type="number" className="form-input" value={form.pricePerCrate}
                                         onChange={e => handlePriceChange(e.target.value)} min="0" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Total Amount ({currency.trim()})</label>
+                                    <input type="number" className="form-input" value={form.totalAmount}
+                                        onChange={e => setForm(f => ({ ...f, totalAmount: e.target.value }))} min="0" />
                                 </div>
                             </div>
                             <div className="form-row">

@@ -24,7 +24,7 @@ export default function EggCollection() {
         date: getDateStr(),
         eggs: '',
         damagedEggs: '0',
-        house: '1',
+        house: "Emeline's Pen",
         crates: '',
         notes: ''
     })
@@ -42,8 +42,8 @@ export default function EggCollection() {
         const todayCrates = todayItems.reduce((s, c) => s + Number(c.crates), 0)
         const todayDamaged = todayItems.reduce((s, c) => s + Number(c.damagedEggs || 0), 0)
 
-        const house1Today = todayItems.filter(c => c.house === '1').reduce((s, c) => s + Number(c.eggs), 0)
-        const house2Today = todayItems.filter(c => c.house === '2').reduce((s, c) => s + Number(c.eggs), 0)
+        const house1Today = todayItems.filter(c => c.house === "Emeline's Pen").reduce((s, c) => s + Number(c.eggs), 0)
+        const house2Today = todayItems.filter(c => c.house === "Dorcas' Pen").reduce((s, c) => s + Number(c.eggs), 0)
 
         const last7 = new Date()
         last7.setDate(last7.getDate() - 7)
@@ -122,7 +122,7 @@ export default function EggCollection() {
                     <div className="stat-icon blue"><Home size={24} /></div>
                     <div className="stat-info">
                         <h3>{stats.house1Today} / {stats.house2Today}</h3>
-                        <p>House 1 / House 2</p>
+                        <p>Emeline's / Dorcas' Pen</p>
                     </div>
                 </div>
                 <div className="stat-card">
@@ -146,13 +146,13 @@ export default function EggCollection() {
                 <div className="flex justify-between items-center mb-lg" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                     <h3>Collection History</h3>
                     <div className="filters-bar" style={{ marginBottom: 0 }}>
-                        {['all', '1', '2'].map(f => (
+                        {['all', "Emeline's Pen", "Dorcas' Pen"].map(f => (
                             <button
-                                key={f}
+                                key={`house-${f}`}
                                 className={`filter-chip ${filterHouse === f ? 'active' : ''}`}
                                 onClick={() => setFilterHouse(f)}
                             >
-                                {f === 'all' ? 'All Houses' : `House ${f}`}
+                                {f === 'all' ? 'All Pens' : f}
                             </button>
                         ))}
                     </div>
@@ -188,7 +188,7 @@ export default function EggCollection() {
                                 {filteredCollections.map(c => (
                                     <tr key={c.id}>
                                         <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(c.date)}</td>
-                                        <td><span className="badge badge-info">House {c.house || '1'}</span></td>
+                                        <td><span className="badge badge-info">{c.house || "Emeline's Pen"}</span></td>
                                         <td className="font-bold text-accent">{Number(c.eggs).toLocaleString()}</td>
                                         <td>{Number(c.damagedEggs || 0) > 0 ? <span className="text-danger">{c.damagedEggs}</span> : '0'}</td>
                                         <td className="font-bold">{(Number(c.goodEggs) || (Number(c.eggs) - Number(c.damagedEggs || 0))).toLocaleString()}</td>
@@ -229,8 +229,8 @@ export default function EggCollection() {
                                     <label>House / Pen</label>
                                     <select className="form-select" value={form.house}
                                         onChange={e => setForm(f => ({ ...f, house: e.target.value }))}>
-                                        <option value="1">House 1</option>
-                                        <option value="2">House 2</option>
+                                        <option value="Emeline's Pen">Emeline's Pen</option>
+                                        <option value="Dorcas' Pen">Dorcas' Pen</option>
                                     </select>
                                 </div>
                             </div>

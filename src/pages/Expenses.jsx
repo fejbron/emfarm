@@ -28,8 +28,11 @@ export default function Expenses() {
         category: 'Feed',
         description: '',
         amount: '',
-        paymentMethod: 'Cash'
+        paymentMethod: 'Cash',
+        house: "Emeline's Pen"
     })
+    
+    const [filterHouse, setFilterHouse] = useState('all')
 
     const today = getDateStr()
 
@@ -60,9 +63,15 @@ export default function Expenses() {
     }, [expenses, today])
 
     const filteredExpenses = useMemo(() => {
-        if (filterCategory === 'all') return expenses
-        return expenses.filter(e => e.category === filterCategory)
-    }, [expenses, filterCategory])
+        let result = expenses
+        if (filterCategory !== 'all') {
+            result = result.filter(e => e.category === filterCategory)
+        }
+        if (filterHouse !== 'all') {
+            result = result.filter(e => e.house === filterHouse)
+        }
+        return result
+    }, [expenses, filterCategory, filterHouse])
 
     // Sort categories by amount for the summary
     const sortedCategories = useMemo(() => {
@@ -81,10 +90,11 @@ export default function Expenses() {
                 category: form.category,
                 description: form.description.trim(),
                 amount: Number(form.amount),
-                paymentMethod: form.paymentMethod
+                paymentMethod: form.paymentMethod,
+                house: form.house
             }
         })
-        setForm({ date: getDateStr(), category: form.category, description: '', amount: '', paymentMethod: 'Cash' })
+        setForm({ date: getDateStr(), category: form.category, description: '', amount: '', paymentMethod: 'Cash', house: "Emeline's Pen" })
         setShowModal(false)
     }
 
@@ -182,13 +192,24 @@ export default function Expenses() {
                 <div className="flex justify-between items-center mb-lg" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                     <h3>Expense History</h3>
                     <div className="filters-bar" style={{ marginBottom: 0 }}>
+                        {['all', "Emeline's Pen", "Dorcas' Pen"].map(f => (
+                            <button
+                                key={`house-${f}`}
+                                className={`filter-chip ${filterHouse === f ? 'active' : ''}`}
+                                onClick={() => setFilterHouse(f)}
+                            >
+                                {f === 'all' ? 'All Pens' : f}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="filters-bar" style={{ marginBottom: 0 }}>
                         <button
                             className={`filter-chip ${filterCategory === 'all' ? 'active' : ''}`}
                             onClick={() => setFilterCategory('all')}
                         >All</button>
                         {EXPENSE_CATEGORIES.map(cat => (
                             <button
-                                key={cat}
+                                key={`cat-${cat}`}
                                 className={`filter-chip ${filterCategory === cat ? 'active' : ''}`}
                                 onClick={() => setFilterCategory(cat)}
                             >{cat}</button>
@@ -213,6 +234,7 @@ export default function Expenses() {
                             <thead>
                                 <tr>
                                     <th>Date</th>
+                                    <th>Pen</th>
                                     <th>Category</th>
                                     <th>Description</th>
                                     <th>Payment</th>
@@ -224,6 +246,7 @@ export default function Expenses() {
                                 {filteredExpenses.map(e => (
                                     <tr key={e.id}>
                                         <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(e.date)}</td>
+                                        <td><span className="badge badge-info">{e.house || "Emeline's Pen"}</span></td>
                                         <td>
                                             <span className="badge" style={{
                                                 background: `${categoryColor(e.category)}20`,
@@ -287,14 +310,22 @@ export default function Expenses() {
                                         min="1" required />
                                 </div>
                                 <div className="form-group">
-                                    <label>Payment Method</label>
-                                    <select className="form-select" value={form.paymentMethod}
-                                        onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value }))}>
-                                        {PAYMENT_METHODS.map(m => (
-                                            <option key={m} value={m}>{m}</option>
-                                        ))}
+                                    <label>House / Pen</label>
+                                    <select className="form-select" value={form.house}
+                                        onChange={e => setForm(f => ({ ...f, house: e.target.value }))}>
+                                        <option value="Emeline's Pen">Emeline's Pen</option>
+                                        <option value="Dorcas' Pen">Dorcas' Pen</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Payment Method</label>
+                                <select className="form-select" value={form.paymentMethod}
+                                    onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value }))}>
+                                    {PAYMENT_METHODS.map(m => (
+                                        <option key={m} value={m}>{m}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="modal-actions">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>

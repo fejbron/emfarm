@@ -40,7 +40,7 @@ function toDb(obj, type) {
             eggs: obj.eggs,
             damaged_eggs: obj.damagedEggs || 0,
             good_eggs: obj.goodEggs || obj.eggs,
-            house: obj.house || '1',
+            house: obj.house || "Emeline's Pen",
             crates: obj.crates,
             notes: obj.notes || ''
         }
@@ -52,7 +52,8 @@ function toDb(obj, type) {
             crates_sold: obj.cratesSold,
             price_per_crate: obj.pricePerCrate,
             total_amount: obj.totalAmount,
-            payment_status: obj.paymentStatus || 'paid'
+            payment_status: obj.paymentStatus || 'paid',
+            house: obj.house || "Emeline's Pen"
         }
     }
     if (type === 'expense') {
@@ -61,7 +62,8 @@ function toDb(obj, type) {
             category: obj.category,
             description: obj.description || '',
             amount: obj.amount,
-            payment_method: obj.paymentMethod || 'Cash'
+            payment_method: obj.paymentMethod || 'Cash',
+            house: obj.house || "Emeline's Pen"
         }
     }
     return obj
@@ -88,7 +90,8 @@ function fromDbSale(row) {
         cratesSold: row.crates_sold,
         pricePerCrate: row.price_per_crate,
         totalAmount: row.total_amount,
-        paymentStatus: row.payment_status
+        paymentStatus: row.payment_status,
+        house: row.house
     }
 }
 
@@ -99,7 +102,8 @@ function fromDbExpense(row) {
         category: row.category,
         description: row.description,
         amount: row.amount,
-        paymentMethod: row.payment_method
+        paymentMethod: row.payment_method,
+        house: row.house
     }
 }
 
