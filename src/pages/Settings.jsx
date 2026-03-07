@@ -40,23 +40,23 @@ export default function SettingsPage() {
         const currentIdx = roles.indexOf(currentRole)
         const newRole = roles[(currentIdx + 1) % roles.length]
 
-        const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId)
+        const { error } = await supabase.rpc('update_user_role', { target_user_id: userId, new_role: newRole })
 
-        if (!error) {
-            setProfiles(profiles.map(p => p.id === userId ? { ...p, role: newRole } : p))
-        } else {
+        if (error) {
             alert("Failed to update role: " + error.message)
+        } else {
+            setProfiles(profiles.map(p => p.id === userId ? { ...p, role: newRole } : p))
         }
     }
 
     const updateAssignedPen = async (userId, pen) => {
         const value = pen === 'all' ? null : pen
-        const { error } = await supabase.from('profiles').update({ assigned_pen: value }).eq('id', userId)
+        const { error } = await supabase.rpc('update_user_pen', { target_user_id: userId, new_pen: value })
 
-        if (!error) {
-            setProfiles(profiles.map(p => p.id === userId ? { ...p, assigned_pen: value } : p))
-        } else {
+        if (error) {
             alert("Failed to assign pen: " + error.message)
+        } else {
+            setProfiles(profiles.map(p => p.id === userId ? { ...p, assigned_pen: value } : p))
         }
     }
 

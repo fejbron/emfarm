@@ -2,7 +2,8 @@
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS assigned_pen TEXT;
 
 -- Add profiles to realtime publication so role/pen updates instantly push to clients
-ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
+-- (Commented out because it was already added successfully)
+-- ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
 
 -- Collections RLS
 DROP POLICY IF EXISTS "Read collections" ON collections;
