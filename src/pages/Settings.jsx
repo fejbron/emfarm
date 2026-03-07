@@ -213,21 +213,17 @@ export default function SettingsPage() {
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    {p.role === 'owner' ? (
-                                                        <select 
-                                                            className="form-select" 
-                                                            style={{ padding: '4px 8px', fontSize: '0.75rem', width: 'auto' }}
-                                                            value={p.assigned_pen || 'all'}
-                                                            onChange={(e) => updateAssignedPen(p.id, e.target.value)}
-                                                            disabled={p.id === state.user?.id}
-                                                        >
-                                                            <option value="all">Unassigned (None)</option>
-                                                            <option value="Emeline's Pen">Emeline's Pen</option>
-                                                            <option value="Dorcas' Pen">Dorcas' Pen</option>
-                                                        </select>
-                                                    ) : (
-                                                        <span className="text-muted" style={{ fontSize: '0.75rem' }}>All Pens</span>
-                                                    )}
+                                                    <select 
+                                                        className="form-select" 
+                                                        style={{ padding: '4px 8px', fontSize: '0.75rem', width: 'auto' }}
+                                                        value={p.assigned_pen || 'all'}
+                                                        onChange={(e) => updateAssignedPen(p.id, e.target.value)}
+                                                        disabled={p.id === state.user?.id}
+                                                    >
+                                                        <option value="all">Unassigned (None)</option>
+                                                        <option value="Emeline's Pen">Emeline's Pen</option>
+                                                        <option value="Dorcas' Pen">Dorcas' Pen</option>
+                                                    </select>
                                                 </td>
                                                 <td className="text-muted">{new Date(p.created_at).toLocaleDateString()}</td>
                                                 <td>

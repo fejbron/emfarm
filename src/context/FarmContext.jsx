@@ -244,7 +244,7 @@ export function FarmProvider({ children }) {
                 ])
 
                 const filterByPen = (data) => {
-                    if (profileData?.role === 'owner' && profileData?.assigned_pen) {
+                    if (profileData?.assigned_pen) {
                         return data.filter(item => {
                             if (item.house === profileData.assigned_pen) return true
                             if (profileData.assigned_pen === "Emeline's Pen" && String(item.house) === '1') return true
@@ -296,6 +296,9 @@ export function FarmProvider({ children }) {
             if (session?.user) {
                 loadDataAndSubscribe(session.user.id).then(profile => {
                     dispatch({ type: 'SET_USER', payload: { user: session.user, profile } })
+                    if (profile?.assigned_pen) {
+                        dispatch({ type: 'SET_ACTIVE_PEN', payload: profile.assigned_pen })
+                    }
                     dispatch({ type: 'SET_LOADING', payload: false })
                 })
             } else {
@@ -307,6 +310,9 @@ export function FarmProvider({ children }) {
             if (session?.user) {
                 loadDataAndSubscribe(session.user.id).then(profile => {
                     dispatch({ type: 'SET_USER', payload: { user: session.user, profile } })
+                    if (profile?.assigned_pen) {
+                        dispatch({ type: 'SET_ACTIVE_PEN', payload: profile.assigned_pen })
+                    }
                 })
             } else {
                 if (channel) supabase.removeChannel(channel)

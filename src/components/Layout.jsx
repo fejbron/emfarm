@@ -150,9 +150,9 @@ export default function Layout({ children }) {
                             style={{ border: 'none', background: 'transparent', padding: 0, fontWeight: 500, fontSize: 'var(--font-sm)', width: 'auto', outline: 'none', cursor: 'pointer' }}
                             value={state.activePen}
                             onChange={(e) => dispatch({ type: 'SET_ACTIVE_PEN', payload: e.target.value })}
-                            disabled={profile?.role === 'owner' && profile?.assigned_pen}
+                            disabled={!!profile?.assigned_pen}
                         >
-                            {profile?.role === 'owner' && profile?.assigned_pen ? (
+                            {profile?.assigned_pen ? (
                                 <option value={profile.assigned_pen}>{profile.assigned_pen}</option>
                             ) : (
                                 <>
