@@ -12,7 +12,8 @@ import {
     Menu,
     X,
     Search,
-    LogOut
+    LogOut,
+    MapPin
 } from 'lucide-react'
 
 const navItems = [
@@ -142,6 +143,26 @@ export default function Layout({ children }) {
                     </div>
                 </div>
                 <div className="topbar-right">
+                    <div className="topbar-env" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: 'var(--space-md)', background: 'var(--bg-input)', padding: '4px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                        <MapPin size={16} className="text-muted" />
+                        <select 
+                            className="form-select" 
+                            style={{ border: 'none', background: 'transparent', padding: 0, fontWeight: 500, fontSize: 'var(--font-sm)', width: 'auto', outline: 'none', cursor: 'pointer' }}
+                            value={state.activePen}
+                            onChange={(e) => dispatch({ type: 'SET_ACTIVE_PEN', payload: e.target.value })}
+                            disabled={profile?.role === 'owner' && profile?.assigned_pen}
+                        >
+                            {profile?.role === 'owner' && profile?.assigned_pen ? (
+                                <option value={profile.assigned_pen}>{profile.assigned_pen}</option>
+                            ) : (
+                                <>
+                                    <option value="all">All Pens</option>
+                                    <option value="Emeline's Pen">Emeline's Pen</option>
+                                    <option value="Dorcas' Pen">Dorcas' Pen</option>
+                                </>
+                            )}
+                        </select>
+                    </div>
                     <div className="topbar-user">
                         <div className="user-profile">
                             <span className="user-avatar">

@@ -17,7 +17,7 @@ function formatDate(dateStr) {
 
 export default function Sales() {
     const { state, dispatch } = useFarm()
-    const { sales, collections, settings, profile } = state
+    const { sales, collections, settings, profile, activePen } = state
     const currency = settings.currency
     const [showModal, setShowModal] = useState(false)
     const [filter, setFilter] = useState('all')
@@ -26,12 +26,9 @@ export default function Sales() {
         customerName: '',
         cratesSold: '',
         pricePerCrate: String(settings.defaultPricePerCrate),
-        totalAmount: '',
         paymentStatus: 'paid',
         house: "Emeline's Pen"
     })
-
-    const [filterHouse, setFilterHouse] = useState('all')
 
     const stockCrates = useMemo(() => {
         const totalCollected = collections.reduce((s, c) => s + Number(c.crates), 0)
@@ -51,16 +48,21 @@ export default function Sales() {
         return { totalRevenue, paidAmount, pendingAmount, totalCratesSold }
     }, [sales])
 
+    const filterByActivePen = (item) => {
+        if (activePen === 'all') return true
+        if (item.house === activePen) return true
+        if (activePen === "Emeline's Pen" && String(item.house) === '1') return true
+        if (activePen === "Dorcas' Pen" && String(item.house) === '2') return true
+        return false
+    }
+
     const filteredSales = useMemo(() => {
-        let result = sales
+        let result = sales.filter(filterByActivePen)
         if (filter !== 'all') {
             result = result.filter(s => s.paymentStatus === filter)
         }
-        if (filterHouse !== 'all') {
-            result = result.filter(s => s.house === filterHouse)
-        }
         return result
-    }, [sales, filter, filterHouse])
+    }, [sales, filter, activePen])
 
     const handleCratesChange = (val) => {
         const cratesSold = val
@@ -189,17 +191,6 @@ export default function Sales() {
             <div className="card">
                 <div className="flex justify-between items-center mb-lg" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                     <h3>Sales History</h3>
-                    <div className="filters-bar" style={{ marginBottom: 0 }}>
-                        {['all', "Emeline's Pen", "Dorcas' Pen"].map(f => (
-                            <button
-                                key={`house-${f}`}
-                                className={`filter-chip ${filterHouse === f ? 'active' : ''}`}
-                                onClick={() => setFilterHouse(f)}
-                            >
-                                {f === 'all' ? 'All Pens' : f}
-                            </button>
-                        ))}
-                    </div>
                     <div className="filters-bar" style={{ marginBottom: 0 }}>
                         {['all', 'paid', 'partial', 'unpaid'].map(f => (
                             <button

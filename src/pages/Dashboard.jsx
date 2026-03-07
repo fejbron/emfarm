@@ -43,12 +43,24 @@ function formatShortDate(dateStr) {
 
 export default function Dashboard() {
     const { state } = useFarm()
-    const { collections, sales, expenses, settings } = state
+    const { collections, sales, expenses, settings, activePen } = state
     const today = getDateStr()
     const currency = settings.currency
 
+    const filterByActivePen = (item) => {
+        if (activePen === 'all') return true
+        if (item.house === activePen) return true
+        if (activePen === "Emeline's Pen" && String(item.house) === '1') return true
+        if (activePen === "Dorcas' Pen" && String(item.house) === '2') return true
+        return false
+    }
+
     const stats = useMemo(() => {
-        const todayCollections = collections.filter(c => c.date === today)
+        const activeCollections = collections.filter(filterByActivePen)
+        const activeSales = sales.filter(filterByActivePen)
+        const activeExpenses = expenses.filter(filterByActivePen)
+
+        const todayCollections = activeCollections.filter(c => c.date === today)
         const todayEggs = todayCollections.reduce((s, c) => s + Number(c.eggs), 0)
         const todayCrates = Number(todayCollections.reduce((s, c) => s + Number(c.crates), 0).toFixed(2))
         const todayDamaged = todayCollections.reduce((s, c) => s + Number(c.damagedEggs || 0), 0)
@@ -56,36 +68,40 @@ export default function Dashboard() {
         const now = new Date()
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-        const monthSales = sales.filter(s => new Date(s.date + 'T00:00:00') >= monthStart)
+        const monthSales = activeSales.filter(s => new Date(s.date + 'T00:00:00') >= monthStart)
         const monthRevenue = monthSales.reduce((s, sl) => s + Number(sl.totalAmount), 0)
 
-        const monthExpenses = expenses
+        const monthExpenses = activeExpenses
             .filter(e => new Date(e.date + 'T00:00:00') >= monthStart)
             .reduce((s, e) => s + Number(e.amount), 0)
 
         const monthProfit = monthRevenue - monthExpenses
 
-        const totalCratesCollected = collections.reduce((s, c) => s + Number(c.crates), 0)
-        const totalCratesSold = sales.reduce((s, sl) => s + Number(sl.cratesSold), 0)
+        const totalCratesCollected = activeCollections.reduce((s, c) => s + Number(c.crates), 0)
+        const totalCratesSold = activeSales.reduce((s, sl) => s + Number(sl.cratesSold), 0)
         const stockCrates = Number((totalCratesCollected - totalCratesSold).toFixed(2))
 
-        const pendingPayments = sales
+        const pendingPayments = activeSales
             .filter(s => s.paymentStatus !== 'paid')
             .reduce((sum, s) => sum + Number(s.totalAmount), 0)
 
-        const todayExpenses = expenses
+        const todayExpenses = activeExpenses
             .filter(e => e.date === today)
             .reduce((s, e) => s + Number(e.amount), 0)
 
         return { todayEggs, todayCrates, todayDamaged, monthRevenue, monthExpenses, monthProfit, stockCrates, pendingPayments, todayExpenses }
-    }, [collections, sales, expenses, today])
+    }, [collections, sales, expenses, today, activePen])
 
     const chartData = useMemo(() => {
+        const activeCollections = collections.filter(filterByActivePen)
+        const activeSales = sales.filter(filterByActivePen)
+        const activeExpenses = expenses.filter(filterByActivePen)
+
         const days = getLast7Days()
         return days.map(day => {
-            const dayCollections = collections.filter(c => c.date === day)
-            const daySales = sales.filter(s => s.date === day)
-            const dayExpenses = expenses.filter(e => e.date === day)
+            const dayCollections = activeCollections.filter(c => c.date === day)
+            const daySales = activeSales.filter(s => s.date === day)
+            const dayExpenses = activeExpenses.filter(e => e.date === day)
             return {
                 name: formatShortDate(day),
                 eggs: dayCollections.reduce((s, c) => s + Number(c.eggs), 0),
@@ -93,11 +109,15 @@ export default function Dashboard() {
                 expenses: dayExpenses.reduce((s, e) => s + Number(e.amount), 0)
             }
         })
-    }, [collections, sales, expenses])
+    }, [collections, sales, expenses, activePen])
 
     const recentActivity = useMemo(() => {
+        const activeCollections = collections.filter(filterByActivePen)
+        const activeSales = sales.filter(filterByActivePen)
+        const activeExpenses = expenses.filter(filterByActivePen)
+
         const items = [
-            ...collections.slice(0, 4).map(c => ({
+            ...activeCollections.slice(0, 4).map(c => ({
                 type: 'collection',
                 title: `Collected ${c.crates} crate${c.crates > 1 ? 's' : ''} (${c.eggs} eggs) — ${c.house || "Emeline's Pen"}`,
                 date: c.date,
@@ -105,7 +125,7 @@ export default function Dashboard() {
                 amountClass: 'text-danger',
                 id: c.id
             })),
-            ...sales.slice(0, 4).map(s => ({
+            ...activeSales.slice(0, 4).map(s => ({
                 type: 'sale',
                 title: `Sold ${s.cratesSold} crate${s.cratesSold > 1 ? 's' : ''} to ${s.customerName}`,
                 date: s.date,
@@ -113,7 +133,7 @@ export default function Dashboard() {
                 amountClass: 'text-success',
                 id: s.id
             })),
-            ...expenses.slice(0, 4).map(e => ({
+            ...activeExpenses.slice(0, 4).map(e => ({
                 type: 'expense',
                 title: `${e.category}: ${e.description || 'Expense'}`,
                 date: e.date,
@@ -124,7 +144,7 @@ export default function Dashboard() {
         ]
         items.sort((a, b) => b.id - a.id)
         return items.slice(0, 10)
-    }, [collections, sales, expenses, currency])
+    }, [collections, sales, expenses, currency, activePen])
 
     return (
         <div>

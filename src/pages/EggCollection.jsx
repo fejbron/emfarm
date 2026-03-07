@@ -17,9 +17,8 @@ function formatDate(dateStr) {
 
 export default function EggCollection() {
     const { state, dispatch } = useFarm()
-    const { collections, settings, profile } = state
+    const { collections, settings, profile, activePen } = state
     const [showModal, setShowModal] = useState(false)
-    const [filterHouse, setFilterHouse] = useState('all')
     const [form, setForm] = useState({
         date: getDateStr(),
         eggs: '',
@@ -31,13 +30,19 @@ export default function EggCollection() {
 
     const today = getDateStr()
 
-    const filteredCollections = useMemo(() => {
-        if (filterHouse === 'all') return collections
-        return collections.filter(c => c.house === filterHouse || (filterHouse === "Emeline's Pen" && c.house === '1') || (filterHouse === "Dorcas' Pen" && c.house === '2'))
-    }, [collections, filterHouse])
+    const filterByActivePen = (item) => {
+        if (activePen === 'all') return true
+        if (item.house === activePen) return true
+        if (activePen === "Emeline's Pen" && String(item.house) === '1') return true
+        if (activePen === "Dorcas' Pen" && String(item.house) === '2') return true
+        return false
+    }
+
+    const filteredCollections = useMemo(() => collections.filter(filterByActivePen), [collections, activePen])
 
     const stats = useMemo(() => {
-        const todayItems = collections.filter(c => c.date === today)
+        const activeCollections = collections.filter(filterByActivePen)
+        const todayItems = activeCollections.filter(c => c.date === today)
         const todayEggs = todayItems.reduce((s, c) => s + Number(c.eggs), 0)
         const todayCrates = Number(todayItems.reduce((s, c) => s + Number(c.crates), 0).toFixed(2))
         const todayDamaged = todayItems.reduce((s, c) => s + Number(c.damagedEggs || 0), 0)
@@ -47,15 +52,15 @@ export default function EggCollection() {
 
         const last7 = new Date()
         last7.setDate(last7.getDate() - 7)
-        const weekItems = collections.filter(c => new Date(c.date + 'T00:00:00') >= last7)
+        const weekItems = activeCollections.filter(c => new Date(c.date + 'T00:00:00') >= last7)
         const weekAvg = weekItems.length > 0
             ? Math.round(weekItems.reduce((s, c) => s + Number(c.eggs), 0) / 7)
             : 0
 
-        const totalDamaged = collections.reduce((s, c) => s + Number(c.damagedEggs || 0), 0)
+        const totalDamaged = activeCollections.reduce((s, c) => s + Number(c.damagedEggs || 0), 0)
 
         return { todayEggs, todayCrates, todayDamaged, house1Today, house2Today, weekAvg, totalDamaged }
-    }, [collections, today])
+    }, [collections, today, activePen])
 
     const handleEggsChange = (val) => {
         const eggs = val
@@ -145,17 +150,6 @@ export default function EggCollection() {
             <div className="card">
                 <div className="flex justify-between items-center mb-lg" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                     <h3>Collection History</h3>
-                    <div className="filters-bar" style={{ marginBottom: 0 }}>
-                        {['all', "Emeline's Pen", "Dorcas' Pen"].map(f => (
-                            <button
-                                key={`house-${f}`}
-                                className={`filter-chip ${filterHouse === f ? 'active' : ''}`}
-                                onClick={() => setFilterHouse(f)}
-                            >
-                                {f === 'all' ? 'All Pens' : f}
-                            </button>
-                        ))}
-                    </div>
                 </div>
 
                 {filteredCollections.length === 0 ? (

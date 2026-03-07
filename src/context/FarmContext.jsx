@@ -28,7 +28,8 @@ const initialState = {
     sales: [],
     expenses: [],
     settings: { ...defaultSettings },
-    loading: true
+    loading: true,
+    activePen: 'all'
 }
 
 // ── Helpers: convert between camelCase (JS) and snake_case (DB) ──
@@ -130,7 +131,8 @@ function loadLocalState() {
                 sales: parsed.sales || [],
                 expenses: parsed.expenses || [],
                 settings: { ...defaultSettings, ...parsed.settings },
-                loading: false
+                loading: false,
+                activePen: parsed.activePen || 'all'
             }
         }
     } catch (e) {
@@ -157,6 +159,8 @@ function farmReducer(state, action) {
             return { ...state, settings: { ...defaultSettings, ...action.payload } }
         case 'SET_LOADING':
             return { ...state, loading: action.payload }
+        case 'SET_ACTIVE_PEN':
+            return { ...state, activePen: action.payload }
         // Local-only actions
         case 'ADD_COLLECTION':
             return { ...state, collections: [{ id: Date.now().toString(), ...action.payload }, ...state.collections] }

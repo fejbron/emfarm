@@ -19,7 +19,7 @@ const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Mobile Money', 'Cheque', 'Oth
 
 export default function Expenses() {
     const { state, dispatch } = useFarm()
-    const { expenses, settings, profile } = state
+    const { expenses, settings, profile, activePen } = state
     const currency = settings.currency
     const [showModal, setShowModal] = useState(false)
     const [filterCategory, setFilterCategory] = useState('all')
@@ -27,51 +27,55 @@ export default function Expenses() {
         date: getDateStr(),
         category: 'Feed',
         description: '',
-        amount: '',
         paymentMethod: 'Cash',
         house: "Emeline's Pen"
     })
-    
-    const [filterHouse, setFilterHouse] = useState('all')
 
     const today = getDateStr()
 
+    const filterByActivePen = (item) => {
+        if (activePen === 'all') return true
+        if (item.house === activePen) return true
+        if (activePen === "Emeline's Pen" && String(item.house) === '1') return true
+        if (activePen === "Dorcas' Pen" && String(item.house) === '2') return true
+        return false
+    }
+
     const stats = useMemo(() => {
+        const activeExpenses = expenses.filter(filterByActivePen)
+
         // Today's expenses
-        const todayExpenses = expenses
+        const todayExpenses = activeExpenses
             .filter(e => e.date === today)
             .reduce((s, e) => s + Number(e.amount), 0)
 
         // This month
         const now = new Date()
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        const monthExpenses = expenses
+        const monthExpenses = activeExpenses
             .filter(e => new Date(e.date + 'T00:00:00') >= monthStart)
             .reduce((s, e) => s + Number(e.amount), 0)
 
         // Total
-        const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0)
+        const totalExpenses = activeExpenses.reduce((s, e) => s + Number(e.amount), 0)
 
         // By category
         const byCategory = {}
         EXPENSE_CATEGORIES.forEach(cat => { byCategory[cat] = 0 })
-        expenses.forEach(e => {
+        activeExpenses.forEach(e => {
             byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.amount)
         })
 
         return { todayExpenses, monthExpenses, totalExpenses, byCategory }
-    }, [expenses, today])
+    }, [expenses, today, activePen])
 
     const filteredExpenses = useMemo(() => {
-        let result = expenses
+        let result = expenses.filter(filterByActivePen)
         if (filterCategory !== 'all') {
             result = result.filter(e => e.category === filterCategory)
         }
-        if (filterHouse !== 'all') {
-            result = result.filter(e => e.house === filterHouse)
-        }
         return result
-    }, [expenses, filterCategory, filterHouse])
+    }, [expenses, filterCategory, activePen])
 
     // Sort categories by amount for the summary
     const sortedCategories = useMemo(() => {
@@ -191,17 +195,6 @@ export default function Expenses() {
             <div className="card">
                 <div className="flex justify-between items-center mb-lg" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                     <h3>Expense History</h3>
-                    <div className="filters-bar" style={{ marginBottom: 0 }}>
-                        {['all', "Emeline's Pen", "Dorcas' Pen"].map(f => (
-                            <button
-                                key={`house-${f}`}
-                                className={`filter-chip ${filterHouse === f ? 'active' : ''}`}
-                                onClick={() => setFilterHouse(f)}
-                            >
-                                {f === 'all' ? 'All Pens' : f}
-                            </button>
-                        ))}
-                    </div>
                     <div className="filters-bar" style={{ marginBottom: 0 }}>
                         <button
                             className={`filter-chip ${filterCategory === 'all' ? 'active' : ''}`}
