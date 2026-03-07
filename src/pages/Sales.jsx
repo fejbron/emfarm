@@ -61,10 +61,20 @@ export default function Sales() {
         setShowModal(true)
     }
 
-    const stockCrates = useMemo(() => {
+    const stocks = useMemo(() => {
         const totalCollected = collections.reduce((s, c) => s + Number(c.crates), 0)
         const totalSold = sales.reduce((s, sl) => s + Number(sl.cratesSold), 0)
-        return Number((totalCollected - totalSold).toFixed(2))
+        const total = Number((totalCollected - totalSold).toFixed(2))
+
+        const emelineColls = collections.filter(c => c.house === "Emeline's Pen" || String(c.house) === '1')
+        const emelineSalesData = sales.filter(s => s.house === "Emeline's Pen" || String(s.house) === '1')
+        const emeline = Number((emelineColls.reduce((s, c) => s + Number(c.crates), 0) - emelineSalesData.reduce((s, sl) => s + Number(sl.cratesSold), 0)).toFixed(2))
+
+        const dorcasColls = collections.filter(c => c.house === "Dorcas' Pen" || String(c.house) === '2')
+        const dorcasSalesData = sales.filter(s => s.house === "Dorcas' Pen" || String(s.house) === '2')
+        const dorcas = Number((dorcasColls.reduce((s, c) => s + Number(c.crates), 0) - dorcasSalesData.reduce((s, sl) => s + Number(sl.cratesSold), 0)).toFixed(2))
+
+        return { total, emeline, dorcas }
     }, [collections, sales])
 
     const stats = useMemo(() => {
@@ -116,9 +126,11 @@ export default function Sales() {
         if (!form.cratesSold || !form.customerName.trim()) return
         const cratesSold = Number(form.cratesSold)
         
+        const currentStock = form.house === "Emeline's Pen" ? stocks.emeline : (form.house === "Dorcas' Pen" ? stocks.dorcas : stocks.total)
+
         // If adding new, check stock. If editing, we allow changes even if stock looks full since they might be correcting an entry
-        if (!editingId && cratesSold > stockCrates) {
-            alert(`Not enough stock! You only have ${stockCrates} crate(s) available.`)
+        if (!editingId && cratesSold > currentStock) {
+            alert(`Not enough stock! You only have ${currentStock} crate(s) available in ${form.house}.`)
             return
         }
 
@@ -178,8 +190,13 @@ export default function Sales() {
                     <p>Track your egg crate sales and payments</p>
                 </div>
                 <div className="flex gap-md items-center" style={{ flexWrap: 'wrap' }}>
-                    <div className="badge badge-info" style={{ padding: '6px 14px', fontSize: 'var(--font-sm)' }}>
-                        <Package size={14} style={{ marginRight: '6px' }} /> {stockCrates} crate{stockCrates !== 1 ? 's' : ''} in stock
+                    <div className="badge badge-info" style={{ padding: '6px 14px', fontSize: 'var(--font-sm)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px', lineHeight: 1.2 }}>
+                        <div><Package size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> {stocks.total} crate(s) total</div>
+                        {activePen === 'all' && (
+                            <div style={{ fontSize: '11px', opacity: 0.85, marginTop: '2px' }}>
+                                E: {stocks.emeline} | D: {stocks.dorcas}
+                            </div>
+                        )}
                     </div>
                     {['manager', 'super_admin'].includes(profile?.role) && (
                         <button className="btn btn-primary" onClick={openModal}>
@@ -320,7 +337,7 @@ export default function Sales() {
                         </div>
                         <div style={{ marginBottom: 'var(--space-md)', padding: '8px 12px', background: 'var(--info-bg)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', color: 'var(--info)' }}>
                             <Package size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                            Available stock: <strong>{stockCrates}</strong> crate{stockCrates !== 1 ? 's' : ''}
+                            Available stock in {form.house}: <strong>{form.house === "Emeline's Pen" ? stocks.emeline : (form.house === "Dorcas' Pen" ? stocks.dorcas : stocks.total)}</strong> crate(s)
                         </div>
                         <form onSubmit={handleSubmit}>
                             <div className="form-row">

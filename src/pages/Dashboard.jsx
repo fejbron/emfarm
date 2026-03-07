@@ -81,6 +81,14 @@ export default function Dashboard() {
         const totalCratesSold = activeSales.reduce((s, sl) => s + Number(sl.cratesSold), 0)
         const stockCrates = Number((totalCratesCollected - totalCratesSold).toFixed(2))
 
+        const emelineColls = collections.filter(c => c.house === "Emeline's Pen" || String(c.house) === '1')
+        const emelineSalesData = sales.filter(s => s.house === "Emeline's Pen" || String(s.house) === '1')
+        const emelineStock = Number((emelineColls.reduce((s, c) => s + Number(c.crates), 0) - emelineSalesData.reduce((s, sl) => s + Number(sl.cratesSold), 0)).toFixed(2))
+
+        const dorcasColls = collections.filter(c => c.house === "Dorcas' Pen" || String(c.house) === '2')
+        const dorcasSalesData = sales.filter(s => s.house === "Dorcas' Pen" || String(s.house) === '2')
+        const dorcasStock = Number((dorcasColls.reduce((s, c) => s + Number(c.crates), 0) - dorcasSalesData.reduce((s, sl) => s + Number(sl.cratesSold), 0)).toFixed(2))
+
         const pendingPayments = activeSales
             .filter(s => s.paymentStatus !== 'paid')
             .reduce((sum, s) => sum + Number(s.totalAmount), 0)
@@ -89,7 +97,7 @@ export default function Dashboard() {
             .filter(e => e.date === today)
             .reduce((s, e) => s + Number(e.amount), 0)
 
-        return { todayEggs, todayCrates, todayDamaged, monthRevenue, monthExpenses, monthProfit, stockCrates, pendingPayments, todayExpenses }
+        return { todayEggs, todayCrates, todayDamaged, monthRevenue, monthExpenses, monthProfit, stockCrates, emelineStock, dorcasStock, pendingPayments, todayExpenses }
     }, [collections, sales, expenses, today, activePen])
 
     const chartData = useMemo(() => {
@@ -196,11 +204,21 @@ export default function Dashboard() {
             </div>
 
             <div className="stat-cards" style={{ marginBottom: 'var(--space-xl)' }}>
-                <div className="stat-card">
+                <div className="stat-card" style={{ alignItems: 'flex-start' }}>
                     <div className="stat-icon blue"><Package size={24} /></div>
-                    <div className="stat-info">
-                        <h3>{stats.stockCrates.toLocaleString()}</h3>
-                        <p>Crates in Stock</p>
+                    <div className="stat-info" style={{ width: '100%', flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <h3>{stats.stockCrates.toLocaleString()}</h3>
+                                <p>Crates in Stock</p>
+                            </div>
+                        </div>
+                        {activePen === 'all' && (
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: 'var(--font-xs)', paddingTop: '6px', borderTop: '1px solid var(--border-color)' }}>
+                                <span style={{ color: 'var(--info)', fontWeight: 600 }}>Emeline's: {stats.emelineStock}</span>
+                                <span style={{ color: 'var(--purple)', fontWeight: 600 }}>Dorcas': {stats.dorcasStock}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="stat-card">
