@@ -33,7 +33,7 @@ export default function Sales() {
     const stockCrates = useMemo(() => {
         const totalCollected = collections.reduce((s, c) => s + Number(c.crates), 0)
         const totalSold = sales.reduce((s, sl) => s + Number(sl.cratesSold), 0)
-        return totalCollected - totalSold
+        return Number((totalCollected - totalSold).toFixed(2))
     }, [collections, sales])
 
     const stats = useMemo(() => {
