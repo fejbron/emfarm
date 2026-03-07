@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFarm, EXPENSE_CATEGORIES } from '../context/FarmContext'
-import { Wallet, Plus, Trash2, X, TrendingDown, Calendar, Tag } from 'lucide-react'
+import { Receipt, Plus, Trash2, X, DollarSign, Calendar, Filter, CreditCard, Wallet, Edit2 } from 'lucide-react'
 
 function getDateStr() {
     return new Date().toISOString().split('T')[0]
@@ -22,14 +22,43 @@ export default function Expenses() {
     const { expenses, settings, profile, activePen } = state
     const currency = settings.currency
     const [showModal, setShowModal] = useState(false)
+    const [editingId, setEditingId] = useState(null)
     const [filterCategory, setFilterCategory] = useState('all')
     const [form, setForm] = useState({
         date: getDateStr(),
         category: 'Feed',
         description: '',
+        amount: '',
         paymentMethod: 'Cash',
         house: "Emeline's Pen"
     })
+
+    const openModal = () => setShowModal(true)
+    const closeModal = () => {
+        setShowModal(false)
+        setEditingId(null)
+        setForm({
+            date: getDateStr(),
+            category: 'Feed',
+            description: '',
+            amount: '',
+            paymentMethod: 'Cash',
+            house: "Emeline's Pen"
+        })
+    }
+
+    const handleEdit = (exp) => {
+        setForm({
+            date: exp.date,
+            category: exp.category,
+            description: exp.description || '',
+            amount: String(exp.amount),
+            paymentMethod: exp.paymentMethod || 'Cash',
+            house: exp.house || "Emeline's Pen"
+        })
+        setEditingId(exp.id)
+        openModal()
+    }
 
     const today = getDateStr()
 
@@ -87,19 +116,26 @@ export default function Expenses() {
     const handleSubmit = (e) => {
         e.preventDefault()
         if (!form.amount || Number(form.amount) <= 0) return
-        dispatch({
-            type: 'ADD_EXPENSE',
-            payload: {
-                date: form.date,
-                category: form.category,
-                description: form.description.trim(),
-                amount: Number(form.amount),
-                paymentMethod: form.paymentMethod,
-                house: form.house
-            }
-        })
-        setForm({ date: getDateStr(), category: form.category, description: '', amount: '', paymentMethod: 'Cash', house: "Emeline's Pen" })
-        setShowModal(false)
+        
+        const payload = {
+            date: form.date,
+            category: form.category,
+            description: form.description.trim(),
+            amount: Number(form.amount),
+            paymentMethod: form.paymentMethod,
+            house: form.house
+        }
+
+        if (editingId) {
+            payload.updatedByName = profile?.full_name || 'User'
+            payload.updatedAt = new Date().toISOString()
+            dispatch({ type: 'UPDATE_EXPENSE', payload: { id: editingId, data: payload } })
+        } else {
+            payload.createdByName = profile?.full_name || 'User'
+            dispatch({ type: 'ADD_EXPENSE', payload })
+        }
+        
+        closeModal()
     }
 
     const handleDelete = (id) => {
@@ -123,8 +159,8 @@ export default function Expenses() {
                     <p>Track farm expenses by category</p>
                 </div>
                 {['manager', 'super_admin'].includes(profile?.role) && (
-                    <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                        <Plus size={18} /> Add Expense
+                    <button className="btn btn-primary" onClick={openModal}>
+                        <Plus size={18} /> Record Expense
                     </button>
                 )}
             </div>
@@ -138,7 +174,7 @@ export default function Expenses() {
                     </div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon amber"><TrendingDown size={24} /></div>
+                    <div className="stat-icon amber"><DollarSign size={24} /></div>
                     <div className="stat-info">
                         <h3>{currency}{stats.monthExpenses.toLocaleString()}</h3>
                         <p>This Month</p>
@@ -152,7 +188,7 @@ export default function Expenses() {
                     </div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon green"><Tag size={24} /></div>
+                    <div className="stat-icon green"><Filter size={24} /></div>
                     <div className="stat-info">
                         <h3>{sortedCategories.length}</h3>
                         <p>Active Categories</p>
@@ -214,10 +250,10 @@ export default function Expenses() {
                     <div className="empty-state">
                         <div className="empty-icon"><Wallet size={28} /></div>
                         <h3>No expenses recorded</h3>
-                        <p>{filterCategory !== 'all' ? `No ${filterCategory} expenses found` : (['manager', 'super_admin'].includes(profile?.role) ? 'Click "Add Expense" to log your first expense' : 'Waiting for the manager to record expenses')}</p>
+                        <p>{filterCategory !== 'all' ? 'No expenses match this category' : (['manager', 'super_admin'].includes(profile?.role) ? 'Click "Record Expense" to log your first expense' : 'Waiting for the manager to record expenses')}</p>
                         {filterCategory === 'all' && ['manager', 'super_admin'].includes(profile?.role) && (
-                            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                                <Plus size={18} /> Add Expense
+                            <button className="btn btn-primary" onClick={openModal}>
+                                <Plus size={18} /> Record Expense
                             </button>
                         )}
                     </div>
@@ -238,7 +274,14 @@ export default function Expenses() {
                             <tbody>
                                 {filteredExpenses.map(e => (
                                     <tr key={e.id}>
-                                        <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(e.date)}</td>
+                                        <td>
+                                            <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(e.date)}</div>
+                                            {(e.createdByName || e.updatedByName) && (
+                                                <div className="text-muted" style={{ fontSize: '10px', marginTop: '4px', whiteSpace: 'nowrap' }}>
+                                                    {e.updatedByName ? `Edited by ${e.updatedByName}` : `Added by ${e.createdByName}`}
+                                                </div>
+                                            )}
+                                        </td>
                                         <td><span className="badge badge-info">{e.house || "Emeline's Pen"}</span></td>
                                         <td>
                                             <span className="badge" style={{
@@ -247,13 +290,23 @@ export default function Expenses() {
                                             }}>{e.category}</span>
                                         </td>
                                         <td>{e.description || '—'}</td>
-                                        <td className="text-muted">{e.paymentMethod}</td>
+                                        <td>
+                                            <div className="flex items-center gap-xs text-muted" style={{ fontSize: 'var(--font-sm)' }}>
+                                                {e.paymentMethod === 'Cash' ? <Wallet size={14} /> : <CreditCard size={14} />}
+                                                {e.paymentMethod}
+                                            </div>
+                                        </td>
                                         <td className="font-bold text-danger">{currency}{Number(e.amount).toLocaleString()}</td>
                                         {['manager', 'super_admin'].includes(profile?.role) && (
                                             <td>
-                                                <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(e.id)}>
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <div className="flex gap-xs justify-end">
+                                                    <button className="btn btn-icon btn-secondary" title="Edit" onClick={() => handleEdit(e)}>
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(e.id)}>
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         )}
                                     </tr>
@@ -265,11 +318,11 @@ export default function Expenses() {
             </div>
 
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                <div className="modal-overlay" onClick={closeModal}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Add Expense</h3>
-                            <button className="btn btn-icon btn-secondary" onClick={() => setShowModal(false)}>
+                            <h3>{editingId ? 'Edit Expense' : 'Record Expense'}</h3>
+                            <button className="btn btn-icon btn-secondary" onClick={closeModal}>
                                 <X size={18} />
                             </button>
                         </div>
@@ -321,8 +374,8 @@ export default function Expenses() {
                                 </select>
                             </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">Save Expense</button>
+                                <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                                <button type="submit" className="btn btn-primary">{editingId ? 'Save Changes' : 'Save Expense'}</button>
                             </div>
                         </form>
                     </div>

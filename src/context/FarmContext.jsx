@@ -35,8 +35,9 @@ const initialState = {
 // ── Helpers: convert between camelCase (JS) and snake_case (DB) ──
 
 function toDb(obj, type) {
+    let result = {}
     if (type === 'collection') {
-        return {
+        result = {
             date: obj.date,
             eggs: obj.eggs,
             damaged_eggs: obj.damagedEggs || 0,
@@ -45,9 +46,8 @@ function toDb(obj, type) {
             crates: obj.crates,
             notes: obj.notes || ''
         }
-    }
-    if (type === 'sale') {
-        return {
+    } else if (type === 'sale') {
+        result = {
             date: obj.date,
             customer_name: obj.customerName,
             crates_sold: obj.cratesSold,
@@ -56,9 +56,8 @@ function toDb(obj, type) {
             payment_status: obj.paymentStatus || 'paid',
             house: obj.house || "Emeline's Pen"
         }
-    }
-    if (type === 'expense') {
-        return {
+    } else if (type === 'expense') {
+        result = {
             date: obj.date,
             category: obj.category,
             description: obj.description || '',
@@ -66,8 +65,15 @@ function toDb(obj, type) {
             payment_method: obj.paymentMethod || 'Cash',
             house: obj.house || "Emeline's Pen"
         }
+    } else {
+        result = { ...obj }
     }
-    return obj
+
+    if (obj.createdByName) result.created_by_name = obj.createdByName
+    if (obj.updatedByName) result.updated_by_name = obj.updatedByName
+    if (obj.updatedAt) result.updated_at = obj.updatedAt
+
+    return result
 }
 
 function fromDbCollection(row) {
@@ -79,7 +85,10 @@ function fromDbCollection(row) {
         goodEggs: row.good_eggs,
         house: row.house,
         crates: row.crates,
-        notes: row.notes
+        notes: row.notes,
+        createdByName: row.created_by_name,
+        updatedByName: row.updated_by_name,
+        updatedAt: row.updated_at
     }
 }
 
@@ -92,7 +101,10 @@ function fromDbSale(row) {
         pricePerCrate: row.price_per_crate,
         totalAmount: row.total_amount,
         paymentStatus: row.payment_status,
-        house: row.house
+        house: row.house,
+        createdByName: row.created_by_name,
+        updatedByName: row.updated_by_name,
+        updatedAt: row.updated_at
     }
 }
 
@@ -104,7 +116,10 @@ function fromDbExpense(row) {
         description: row.description,
         amount: row.amount,
         paymentMethod: row.payment_method,
-        house: row.house
+        house: row.house,
+        createdByName: row.created_by_name,
+        updatedByName: row.updated_by_name,
+        updatedAt: row.updated_at
     }
 }
 
@@ -166,6 +181,8 @@ function farmReducer(state, action) {
             return { ...state, collections: [{ id: Date.now().toString(), ...action.payload }, ...state.collections] }
         case 'DELETE_COLLECTION':
             return { ...state, collections: state.collections.filter(c => c.id !== action.payload) }
+        case 'UPDATE_COLLECTION':
+            return { ...state, collections: state.collections.map(c => c.id === action.payload.id ? { ...c, ...action.payload.data } : c) }
         case 'ADD_SALE':
             return { ...state, sales: [{ id: Date.now().toString(), ...action.payload }, ...state.sales] }
         case 'DELETE_SALE':
@@ -176,6 +193,8 @@ function farmReducer(state, action) {
             return { ...state, expenses: [{ id: Date.now().toString(), ...action.payload }, ...state.expenses] }
         case 'DELETE_EXPENSE':
             return { ...state, expenses: state.expenses.filter(e => e.id !== action.payload) }
+        case 'UPDATE_EXPENSE':
+            return { ...state, expenses: state.expenses.map(e => e.id === action.payload.id ? { ...e, ...action.payload.data } : e) }
         case 'UPDATE_SETTINGS':
             return { ...state, settings: { ...state.settings, ...action.payload } }
         case 'CLEAR_ALL':
@@ -318,44 +337,53 @@ export function FarmProvider({ children }) {
         try {
             switch (action.type) {
                 case 'ADD_COLLECTION': {
-                    const { error } = await supabase.from('collections').insert(toDb(action.payload, 'collection'))
-                    if (error) throw error
-                    break
-                }
-                case 'DELETE_COLLECTION': {
-                    const { error } = await supabase.from('collections').delete().eq('id', action.payload)
-                    if (error) throw error
-                    break
-                }
-                case 'ADD_SALE': {
-                    const { error } = await supabase.from('sales').insert(toDb(action.payload, 'sale'))
-                    if (error) throw error
-                    break
-                }
-                case 'DELETE_SALE': {
-                    const { error } = await supabase.from('sales').delete().eq('id', action.payload)
-                    if (error) throw error
-                    break
-                }
-                case 'UPDATE_SALE': {
-                    const updateData = {}
-                    if (action.payload.data.paymentStatus !== undefined) {
-                        updateData.payment_status = action.payload.data.paymentStatus
-                    }
-                    const { error } = await supabase.from('sales').update(updateData).eq('id', action.payload.id)
-                    if (error) throw error
-                    break
-                }
-                case 'ADD_EXPENSE': {
-                    const { error } = await supabase.from('expenses').insert(toDb(action.payload, 'expense'))
-                    if (error) throw error
-                    break
-                }
-                case 'DELETE_EXPENSE': {
-                    const { error } = await supabase.from('expenses').delete().eq('id', action.payload)
-                    if (error) throw error
-                    break
-                }
+            const { error } = await supabase.from('collections').insert(toDb(action.payload, 'collection'))
+            if (error) throw error
+            break
+        }
+        case 'DELETE_COLLECTION': {
+            const { error } = await supabase.from('collections').delete().eq('id', action.payload)
+            if (error) throw error
+            break
+        }
+        case 'UPDATE_COLLECTION': {
+            const updateData = toDb(action.payload.data, 'collection')
+            const { error } = await supabase.from('collections').update(updateData).eq('id', action.payload.id)
+            if (error) throw error
+            break
+        }
+        case 'ADD_SALE': {
+            const { error } = await supabase.from('sales').insert(toDb(action.payload, 'sale'))
+            if (error) throw error
+            break
+        }
+        case 'DELETE_SALE': {
+            const { error } = await supabase.from('sales').delete().eq('id', action.payload)
+            if (error) throw error
+            break
+        }
+        case 'UPDATE_SALE': {
+            const updateData = toDb(action.payload.data, 'sale')
+            const { error } = await supabase.from('sales').update(updateData).eq('id', action.payload.id)
+            if (error) throw error
+            break
+        }
+        case 'ADD_EXPENSE': {
+            const { error } = await supabase.from('expenses').insert(toDb(action.payload, 'expense'))
+            if (error) throw error
+            break
+        }
+        case 'DELETE_EXPENSE': {
+            const { error } = await supabase.from('expenses').delete().eq('id', action.payload)
+            if (error) throw error
+            break
+        }
+        case 'UPDATE_EXPENSE': {
+            const updateData = toDb(action.payload.data, 'expense')
+            const { error } = await supabase.from('expenses').update(updateData).eq('id', action.payload.id)
+            if (error) throw error
+            break
+        }
                 case 'UPDATE_SETTINGS': {
                     const dbSettings = {
                         farm_name: action.payload.farmName,

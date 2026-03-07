@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFarm } from '../context/FarmContext'
-import { ShoppingCart, Plus, Trash2, X, DollarSign, Clock, CheckCircle, AlertCircle, Package } from 'lucide-react'
+import { ShoppingCart, Plus, Trash2, X, DollarSign, Clock, CheckCircle, AlertCircle, Package, Edit2 } from 'lucide-react'
 
 function getDateStr() {
     return new Date().toISOString().split('T')[0]
@@ -20,15 +20,46 @@ export default function Sales() {
     const { sales, collections, settings, profile, activePen } = state
     const currency = settings.currency
     const [showModal, setShowModal] = useState(false)
+    const [editingId, setEditingId] = useState(null)
     const [filter, setFilter] = useState('all')
     const [form, setForm] = useState({
         date: getDateStr(),
         customerName: '',
         cratesSold: '',
         pricePerCrate: String(settings.defaultPricePerCrate),
+        totalAmount: '',
         paymentStatus: 'paid',
         house: "Emeline's Pen"
     })
+
+    const openModal = () => setShowModal(true)
+    const closeModal = () => {
+        setShowModal(false)
+        setEditingId(null)
+        setForm({
+            date: getDateStr(),
+            customerName: '',
+            cratesSold: '',
+            pricePerCrate: String(settings.defaultPricePerCrate),
+            totalAmount: '',
+            paymentStatus: 'paid',
+            house: "Emeline's Pen"
+        })
+    }
+
+    const handleEdit = (s) => {
+        setForm({
+            date: s.date,
+            customerName: s.customerName,
+            cratesSold: String(s.cratesSold),
+            pricePerCrate: String(s.pricePerCrate),
+            totalAmount: String(s.totalAmount),
+            paymentStatus: s.paymentStatus,
+            house: s.house || "Emeline's Pen"
+        })
+        setEditingId(s.id)
+        setShowModal(true)
+    }
 
     const stockCrates = useMemo(() => {
         const totalCollected = collections.reduce((s, c) => s + Number(c.crates), 0)
@@ -84,32 +115,33 @@ export default function Sales() {
         e.preventDefault()
         if (!form.cratesSold || !form.customerName.trim()) return
         const cratesSold = Number(form.cratesSold)
-        if (cratesSold > stockCrates) {
+        
+        // If adding new, check stock. If editing, we allow changes even if stock looks full since they might be correcting an entry
+        if (!editingId && cratesSold > stockCrates) {
             alert(`Not enough stock! You only have ${stockCrates} crate(s) available.`)
             return
         }
-        dispatch({
-            type: 'ADD_SALE',
-            payload: {
-                date: form.date,
-                customerName: form.customerName.trim(),
-                cratesSold,
-                pricePerCrate: Number(form.pricePerCrate),
-                totalAmount: Number(form.totalAmount) || cratesSold * Number(form.pricePerCrate),
-                paymentStatus: form.paymentStatus,
-                house: form.house
-            }
-        })
-        setForm({
-            date: getDateStr(),
-            customerName: '',
-            cratesSold: '',
-            pricePerCrate: String(settings.defaultPricePerCrate),
-            totalAmount: '',
-            paymentStatus: 'paid',
-            house: "Emeline's Pen"
-        })
-        setShowModal(false)
+
+        const payload = {
+            date: form.date,
+            customerName: form.customerName.trim(),
+            cratesSold,
+            pricePerCrate: Number(form.pricePerCrate),
+            totalAmount: Number(form.totalAmount) || cratesSold * Number(form.pricePerCrate),
+            paymentStatus: form.paymentStatus,
+            house: form.house
+        }
+
+        if (editingId) {
+            payload.updatedByName = profile?.full_name || 'User'
+            payload.updatedAt = new Date().toISOString()
+            dispatch({ type: 'UPDATE_SALE', payload: { id: editingId, data: payload } })
+        } else {
+            payload.createdByName = profile?.full_name || 'User'
+            dispatch({ type: 'ADD_SALE', payload })
+        }
+        
+        closeModal()
     }
 
     const handleDelete = (id) => {
@@ -150,7 +182,7 @@ export default function Sales() {
                         <Package size={14} style={{ marginRight: '6px' }} /> {stockCrates} crate{stockCrates !== 1 ? 's' : ''} in stock
                     </div>
                     {['manager', 'super_admin'].includes(profile?.role) && (
-                        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                        <button className="btn btn-primary" onClick={openModal}>
                             <Plus size={18} /> Record Sale
                         </button>
                     )}
@@ -210,7 +242,7 @@ export default function Sales() {
                         <h3>No sales recorded</h3>
                         <p>{filter !== 'all' ? 'No sales match this filter' : (['manager', 'super_admin'].includes(profile?.role) ? 'Click "Record Sale" to log your first sale' : 'Waiting for the manager to record sales')}</p>
                         {filter === 'all' && ['manager', 'super_admin'].includes(profile?.role) && (
-                            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                            <button className="btn btn-primary" onClick={openModal}>
                                 <Plus size={18} /> Record Sale
                             </button>
                         )}
@@ -233,7 +265,14 @@ export default function Sales() {
                             <tbody>
                                 {filteredSales.map(s => (
                                     <tr key={s.id}>
-                                        <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(s.date)}</td>
+                                        <td>
+                                            <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(s.date)}</div>
+                                            {(s.createdByName || s.updatedByName) && (
+                                                <div className="text-muted" style={{ fontSize: '10px', marginTop: '4px', whiteSpace: 'nowrap' }}>
+                                                    {s.updatedByName ? `Edited by ${s.updatedByName}` : `Added by ${s.createdByName}`}
+                                                </div>
+                                            )}
+                                        </td>
                                         <td style={{ fontWeight: 600 }}>{s.customerName}</td>
                                         <td><span className="badge badge-info">{s.house || "Emeline's Pen"}</span></td>
                                         <td>{s.cratesSold}</td>
@@ -252,9 +291,14 @@ export default function Sales() {
                                         </td>
                                         {['manager', 'super_admin'].includes(profile?.role) && (
                                             <td>
-                                                <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(s.id)}>
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <div className="flex gap-xs justify-end">
+                                                    <button className="btn btn-icon btn-secondary" title="Edit" onClick={() => handleEdit(s)}>
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(s.id)}>
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         )}
                                     </tr>
@@ -266,11 +310,11 @@ export default function Sales() {
             </div>
 
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                <div className="modal-overlay" onClick={closeModal}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Record Sale</h3>
-                            <button className="btn btn-icon btn-secondary" onClick={() => setShowModal(false)}>
+                            <h3>{editingId ? 'Edit Sale' : 'Record Sale'}</h3>
+                            <button className="btn btn-icon btn-secondary" onClick={closeModal}>
                                 <X size={18} />
                             </button>
                         </div>
@@ -336,8 +380,8 @@ export default function Sales() {
                                 </div>
                             </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">Save Sale</button>
+                                <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                                <button type="submit" className="btn btn-primary">{editingId ? 'Save Changes' : 'Save Sale'}</button>
                             </div>
                         </form>
                     </div>

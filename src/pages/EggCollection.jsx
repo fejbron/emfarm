@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFarm } from '../context/FarmContext'
-import { Egg, Plus, Trash2, X, Package, Home, AlertTriangle } from 'lucide-react'
+import { Egg, Plus, Trash2, X, Package, Home, AlertTriangle, Edit2 } from 'lucide-react'
 
 function getDateStr() {
     return new Date().toISOString().split('T')[0]
@@ -19,6 +19,7 @@ export default function EggCollection() {
     const { state, dispatch } = useFarm()
     const { collections, settings, profile, activePen } = state
     const [showModal, setShowModal] = useState(false)
+    const [editingId, setEditingId] = useState(null)
     const [form, setForm] = useState({
         date: getDateStr(),
         eggs: '',
@@ -27,6 +28,26 @@ export default function EggCollection() {
         crates: '',
         notes: ''
     })
+
+    const openModal = () => setShowModal(true)
+    const closeModal = () => {
+        setShowModal(false)
+        setEditingId(null)
+        setForm({ date: getDateStr(), eggs: '', damagedEggs: '0', house: "Emeline's Pen", crates: '', notes: '' })
+    }
+
+    const handleEdit = (c) => {
+        setForm({
+            date: c.date,
+            eggs: String(c.eggs),
+            damagedEggs: String(c.damagedEggs || '0'),
+            house: c.house || "Emeline's Pen",
+            crates: String(c.crates),
+            notes: c.notes || ''
+        })
+        setEditingId(c.id)
+        setShowModal(true)
+    }
 
     const today = getDateStr()
 
@@ -80,20 +101,27 @@ export default function EggCollection() {
         e.preventDefault()
         if (!form.eggs || Number(form.eggs) <= 0) return
         const goodEggs = Math.max(0, Number(form.eggs) - Number(form.damagedEggs || 0))
-        dispatch({
-            type: 'ADD_COLLECTION',
-            payload: {
-                date: form.date,
-                eggs: Number(form.eggs),
-                damagedEggs: Number(form.damagedEggs) || 0,
-                goodEggs,
-                house: form.house,
-                crates: Number(form.crates) || parseFloat((goodEggs / settings.eggsPerCrate).toFixed(2)),
-                notes: form.notes.trim()
-            }
-        })
-        setForm({ date: getDateStr(), eggs: '', damagedEggs: '0', house: form.house, crates: '', notes: '' })
-        setShowModal(false)
+        
+        const payload = {
+            date: form.date,
+            eggs: Number(form.eggs),
+            damagedEggs: Number(form.damagedEggs) || 0,
+            goodEggs,
+            house: form.house,
+            crates: Number(form.crates) || parseFloat((goodEggs / settings.eggsPerCrate).toFixed(2)),
+            notes: form.notes.trim()
+        }
+
+        if (editingId) {
+            payload.updatedByName = profile?.full_name || 'User'
+            payload.updatedAt = new Date().toISOString()
+            dispatch({ type: 'UPDATE_COLLECTION', payload: { id: editingId, data: payload } })
+        } else {
+            payload.createdByName = profile?.full_name || 'User'
+            dispatch({ type: 'ADD_COLLECTION', payload })
+        }
+        
+        closeModal()
     }
 
     const handleDelete = (id) => {
@@ -108,7 +136,7 @@ export default function EggCollection() {
                     <p>Track daily egg production by house</p>
                 </div>
                 {['manager', 'super_admin'].includes(profile?.role) && (
-                    <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                    <button className="btn btn-primary" onClick={openModal}>
                         <Plus size={18} /> Add Collection
                     </button>
                 )}
@@ -158,7 +186,7 @@ export default function EggCollection() {
                         <h3>No collections recorded</h3>
                         <p>{['manager', 'super_admin'].includes(profile?.role) ? 'Click "Add Collection" to log your first egg collection' : 'Waiting for the manager to log collections'}</p>
                         {['manager', 'super_admin'].includes(profile?.role) && (
-                            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                            <button className="btn btn-primary" onClick={openModal}>
                                 <Plus size={18} /> Add Collection
                             </button>
                         )}
@@ -181,7 +209,14 @@ export default function EggCollection() {
                             <tbody>
                                 {filteredCollections.map(c => (
                                     <tr key={c.id}>
-                                        <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(c.date)}</td>
+                                        <td>
+                                            <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{formatDate(c.date)}</div>
+                                            {(c.createdByName || c.updatedByName) && (
+                                                <div className="text-muted" style={{ fontSize: '10px', marginTop: '4px', whiteSpace: 'nowrap' }}>
+                                                    {c.updatedByName ? `Edited by ${c.updatedByName}` : `Added by ${c.createdByName}`}
+                                                </div>
+                                            )}
+                                        </td>
                                         <td><span className="badge badge-info">{c.house || "Emeline's Pen"}</span></td>
                                         <td className="font-bold text-accent">{Number(c.eggs).toLocaleString()}</td>
                                         <td>{Number(c.damagedEggs || 0) > 0 ? <span className="text-danger">{c.damagedEggs}</span> : '0'}</td>
@@ -190,9 +225,14 @@ export default function EggCollection() {
                                         <td className="text-muted">{c.notes || '—'}</td>
                                         {['manager', 'super_admin'].includes(profile?.role) && (
                                             <td>
-                                                <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(c.id)}>
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <div className="flex gap-xs justify-end">
+                                                    <button className="btn btn-icon btn-secondary" title="Edit" onClick={() => handleEdit(c)}>
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button className="btn btn-icon btn-danger" title="Delete" onClick={() => handleDelete(c.id)}>
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         )}
                                     </tr>
@@ -204,11 +244,11 @@ export default function EggCollection() {
             </div>
 
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                <div className="modal-overlay" onClick={closeModal}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Add Egg Collection</h3>
-                            <button className="btn btn-icon btn-secondary" onClick={() => setShowModal(false)}>
+                            <h3>{editingId ? 'Edit Egg Collection' : 'Add Egg Collection'}</h3>
+                            <button className="btn btn-icon btn-secondary" onClick={closeModal}>
                                 <X size={18} />
                             </button>
                         </div>
@@ -254,8 +294,8 @@ export default function EggCollection() {
                                     value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
                             </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">Save Collection</button>
+                                <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                                <button type="submit" className="btn btn-primary">{editingId ? 'Save Changes' : 'Save Collection'}</button>
                             </div>
                         </form>
                     </div>
